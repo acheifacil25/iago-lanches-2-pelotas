@@ -1661,7 +1661,75 @@
           }
           return;
         }
-      } catch (e) {}
+      } catch (e) {
+        // Fallback direto via navegador (CORS apiv2.facity.com.br) quando aberto pelo link online em outro computador
+        try {
+          let facityTok = localStorage.getItem("iago_facity_jwt") || "";
+          if (!facityTok && manualNotify) {
+            const pwd = prompt("Digite a senha do Facity (iagolanches2) para sincronizar ao vivo neste computador:");
+            if (pwd) {
+              const lResp = await fetch("https://apiv2.facity.com.br/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username: "iagolanches", password: pwd, name: "iagolanches2" })
+              });
+              if (lResp.ok) {
+                const lData = await lResp.json();
+                facityTok = lData.authtoken || "";
+                if (facityTok) localStorage.setItem("iago_facity_jwt", facityTok);
+              }
+            }
+          }
+          if (facityTok) {
+            const now = new Date();
+            const start = new Date(now.getTime() - 2 * 86400000).toISOString();
+            const end = new Date(now.getTime() + 86400000).toISOString();
+            const oResp = await fetch("https://apiv2.facity.com.br/outwards/type/delivery", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "AuthToken": facityTok, "Authorization": "Bearer " + facityTok },
+              body: JSON.stringify({ startdate: start, enddate: end, initialdate: start, finaldate: end })
+            });
+            if (oResp.ok) {
+              const rawList = await oResp.json();
+              if (Array.isArray(rawList)) {
+                rawList.slice(0, 12).forEach(ro => {
+                  const tk = Number(ro.ticket || 0);
+                  if (!tk || deliveredTickets.has(String(tk))) return;
+                  if (!orders.some(x => x.ticket === tk)) {
+                    const addr = ro.address || {};
+                    const cl = ro.client || {};
+                    const prods = Array.isArray(ro.products) && ro.products.length > 0
+                      ? ro.products.map(p => `${Number(p.quantity || 1)}x ${p.name || 'Lanche'}`)
+                      : ["1x Pedido Facity"];
+                    orders.unshift({
+                      id: `FAC-00${tk}`,
+                      ticket: tk,
+                      barcode: `CODE128-FAC-00${tk}`,
+                      origin: String(ro.origin || "app").toLowerCase(),
+                      cliente: cl.name || ro.clientname || `Cliente #${tk}`,
+                      telefone: String(ro.origin).toLowerCase() === "ifood" ? "0800 700 3040 (iFood)" : (cl.phone || "(53) 98100-0000"),
+                      endereco: `${addr.address || addr.street || 'Av. Fernando Osório'}, ${addr.number || 'S/N'}`,
+                      bairro: addr.neighborhoodname || "Pelotas",
+                      lat: Number(addr.latitude || -31.723736),
+                      lng: Number(addr.longitude || -52.348246),
+                      itens: prods,
+                      total: Number(ro.total || 0),
+                      pagamento: String(ro.origin).toLowerCase() === "ifood" ? "iFood Online" : "Facity",
+                      waitMinutes: 5,
+                      status: "AGUARDANDO_DESPACHO",
+                      motoboyId: null,
+                      motoboyNome: null
+                    });
+                  }
+                });
+                renderOrdersQueue();
+                renderMotoboyFleet();
+                drawPelotasMap();
+              }
+            }
+          }
+        } catch (err2) {}
+      }
       if (manualNotify) {
         showToast(`✅ Fila sincronizada com Facity (${orders.length} pedidos ativos no mapa, incluindo iFood)!`);
       }
