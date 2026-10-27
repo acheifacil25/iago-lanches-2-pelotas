@@ -1,0 +1,12 @@
+# Segredos e Tokens Locais (OWASP Security)
+.env
+database/facity_token.json
+
+# Python Cache & Virtual Environments
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.venv/
+venv/
+env/

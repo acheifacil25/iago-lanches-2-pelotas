@@ -1,0 +1,49 @@
+{
+  "expo": {
+    "name": "Iago Lanches 2 - Motoboy",
+    "slug": "iago-lanches-motoboy",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "backgroundColor": "#0a0a0c"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSCameraUsageDescription": "O app precisa da câmera para ler o código de barras das comandas na lancheria.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Necessário para telemetria em tempo real das entregas em Pelotas.",
+        "NSLocationWhenInUseUsageDescription": "Rastreia a rota até o cliente."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0a0a0c"
+      },
+      "permissions": [
+        "CAMERA",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "VIBRATE"
+      ]
+    },
+    "scheme": "iagolanches",
+    "plugins": [
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Permitir que o Iago Lanches acesse a câmera para bipar comandas."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Permitir que a lancheria acompanhe sua localização em rota de entrega em Pelotas."
+        }
+      ]
+    ]
+  }
+}
