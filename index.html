@@ -1106,7 +1106,7 @@
         : `Av. Fernando Osório ➔ ${order.endereco}`;
 
       const gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(STORE_BASE.address)}&destination=${encodeURIComponent(order.endereco + ", " + order.bairro + ", Pelotas - RS")}&travelmode=driving`;
-      const motoboyPortalUrl = `https://acheifacil25.github.io/iago-lanches-2-pelotas/?motoboy=${encodeURIComponent(mb.id)}&nome=${encodeURIComponent(mb.nome)}&ticket=${encodeURIComponent(order.ticket)}&orderId=${encodeURIComponent(order.id)}&cliente=${encodeURIComponent(order.cliente)}&endereco=${encodeURIComponent(order.endereco)}&bairro=${encodeURIComponent(order.bairro)}&total=${encodeURIComponent(total)}`;
+      const motoboyPortalUrl = `https://acheifacil25.github.io/iago-lanches-2-pelotas/?motoboy=${encodeURIComponent(mb.id)}&nome=${encodeURIComponent(mb.nome)}&ticket=${encodeURIComponent(order.ticket)}&orderId=${encodeURIComponent(order.id)}&cliente=${encodeURIComponent(order.cliente)}&endereco=${encodeURIComponent(order.endereco)}&bairro=${encodeURIComponent(order.bairro)}&itens=${encodeURIComponent(order.itens.join(" | "))}&pagamento=${encodeURIComponent(order.pagamento)}&total=${encodeURIComponent(total)}`;
 
       const textLines = [
         `🍔 *IAGO LANCHES 2 — ENTREGA DESPACHADA*`,
@@ -1119,7 +1119,7 @@
         `💳 *Pagamento:* ${order.pagamento}`,
         `💰 *TOTAL FACITY: R$ ${total}*`,
         ``,
-        `✅ *ABRIR GPS + DAR BAIXA QUANDO ENTREGAR:*`,
+        `📲 *ABRIR COMANDA E DAR BAIXA QUANDO ENTREGAR:*`,
         motoboyPortalUrl,
         ``,
         `🗺️ *ROTA DIRETA NO GOOGLE MAPS:*`,
@@ -1794,31 +1794,53 @@
       const endereco = params.get("endereco") || "Pelotas";
       const bairro = params.get("bairro") || "Pelotas";
       const total = params.get("total") || "0,00";
+      const pagamento = params.get("pagamento") || "Facity";
+      let itensRaw = params.get("itens") || "";
+      if (!itensRaw) {
+        const localOrd = orders.find(o => o.id === orderId || String(o.ticket) === String(ticket));
+        if (localOrd && Array.isArray(localOrd.itens)) itensRaw = localOrd.itens.join(" | ");
+      }
+      const itensList = (itensRaw || "1x Pedido Facity").split("|").map(s => s.trim()).filter(Boolean);
       const gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(STORE_BASE.address)}&destination=${encodeURIComponent(endereco + ", " + bairro + ", Pelotas - RS")}&travelmode=driving`;
 
       document.body.innerHTML = `
         <div class="min-h-screen bg-[#09090b] text-white p-4 flex flex-col justify-between max-w-md mx-auto">
-          <div class="space-y-4">
+          <div class="space-y-3.5">
             <div class="p-4 rounded-2xl bg-[#121218] border border-amber-500/40 flex items-center justify-between">
               <div>
-                <div class="text-xs font-black uppercase text-amber-400">🍔 Iago Lanches 2 — Tela do Motoboy</div>
+                <div class="text-xs font-black uppercase text-amber-400">🍔 Iago Lanches 2 — Entrega</div>
                 <div class="text-lg font-black text-white mt-0.5">🏍️ ${nome}</div>
               </div>
               <span class="px-3 py-1 rounded-full bg-amber-500 text-black font-black text-sm">Comanda #${ticket}</span>
             </div>
 
-            <div id="moto-gps-status" class="p-3 rounded-xl bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 text-xs font-bold flex items-center gap-2">
-              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
-              <span>📡 GPS Ao Vivo Conectado — A loja está vendo sua posição no mapa</span>
-            </div>
+            <div class="p-4 rounded-2xl bg-[#14141d] border border-zinc-800 space-y-2.5">
+              <div>
+                <div class="text-[11px] text-zinc-400 uppercase font-bold">Cliente &amp; Endereço:</div>
+                <div class="text-base font-black text-white mt-0.5">👤 ${cliente}</div>
+                <div class="text-sm font-bold text-amber-300 mt-0.5">📍 ${endereco} — ${bairro}</div>
+              </div>
 
-            <div class="p-4 rounded-2xl bg-[#14141d] border border-zinc-800 space-y-2">
-              <div class="text-xs text-zinc-400 uppercase font-bold">Dados da Entrega:</div>
-              <div class="text-base font-black text-white">👤 ${cliente}</div>
-              <div class="text-sm font-bold text-amber-300">📍 ${endereco} — ${bairro}</div>
-              <div class="pt-2 border-t border-zinc-800 flex items-center justify-between">
-                <span class="text-xs text-zinc-400">Valor Facity:</span>
-                <span class="text-base font-black text-emerald-400">R$ ${total}</span>
+              <div class="pt-2.5 border-t border-zinc-800">
+                <div class="text-[11px] text-zinc-400 uppercase font-bold mb-1.5">🍔 Itens do Pedido:</div>
+                <div class="space-y-1">
+                  ${itensList.map(item => `
+                    <div class="px-2.5 py-1.5 rounded-lg bg-[#09090b] border border-zinc-800 text-xs font-bold text-zinc-100">
+                      • ${item}
+                    </div>
+                  `).join("")}
+                </div>
+              </div>
+
+              <div class="pt-2.5 border-t border-zinc-800 flex items-center justify-between">
+                <div>
+                  <div class="text-[10px] text-zinc-400 uppercase">Pagamento:</div>
+                  <div class="text-xs font-bold text-zinc-200">💳 ${pagamento}</div>
+                </div>
+                <div class="text-right">
+                  <div class="text-[10px] text-zinc-400 uppercase">Total Facity:</div>
+                  <div class="text-base font-black text-emerald-400">R$ ${total}</div>
+                </div>
               </div>
             </div>
 
