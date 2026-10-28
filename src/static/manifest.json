@@ -1,0 +1,25 @@
+{
+  "name": "Iago Lanches 2 — Central de Entregas & Facity",
+  "short_name": "Iago Lanches 2",
+  "description": "Aplicativo Oficial de Entregas, Mapa Ao Vivo de Motoboys e Integração Facity — Iago Lanches 2 (Pelotas/RS)",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#09090b",
+  "theme_color": "#d4af37",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

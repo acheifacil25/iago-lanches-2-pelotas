@@ -2,8 +2,15 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Iago Lanches 2 — Painel de Entregas Facity &amp; Maquininha de Bip</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#09090b" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Iago Lanches 2" />
+  <link rel="manifest" id="app-manifest-link" href="manifest.json" />
+  <link rel="icon" type="image/png" href="icon-192.png" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <title>Iago Lanches 2 — Aplicativo de Entregas Facity &amp; Motoboys</title>
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
   <style>
     :root {
@@ -81,8 +88,11 @@
       </button>
     </div>
 
-    <!-- AÇÕES RÁPIDAS DO FACITY -->
+    <!-- AÇÕES RÁPIDAS DO FACITY & APLICATIVO -->
     <div class="flex items-center gap-1.5">
+      <button onclick="openInstallAppModal()" class="px-2.5 py-1 rounded-lg text-[10.5px] font-black uppercase bg-amber-500 hover:bg-amber-400 text-black shadow cursor-pointer flex items-center gap-1" title="Instalar Aplicativo no Computador ou Enviar Aplicativo para o Celular dos Motoboys">
+        📲 Aplicativo (PC &amp; Motoboy)
+      </button>
       <button onclick="syncLiveOrdersFromFacity(true)" class="px-2.5 py-1 rounded-lg text-[10.5px] font-black bg-sky-950/90 hover:bg-sky-900 text-sky-300 border border-sky-500/40 cursor-pointer" title="Buscar pedidos novos do Facity (inclusive iFood)">
         🔄 Sincronizar Facity
       </button>
@@ -322,6 +332,62 @@
           <button onclick="confirmNewFacityOrder()" class="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-black uppercase cursor-pointer">
             🚀 Inserir Pedido
           </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL INSTALAR APLICATIVO (COMPUTADOR & CELULAR DOS MOTOBOYS) -->
+  <div id="install-app-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-[#121216] border-2 border-amber-500/60 rounded-2xl max-w-2xl w-full overflow-hidden shadow-2xl">
+      <div class="p-4 bg-[#18181f] border-b border-zinc-800 flex items-center justify-between">
+        <div>
+          <h3 class="text-sm font-black uppercase text-amber-400">📲 Aplicativo Oficial Iago Lanches 2 (PC &amp; Motoboys)</h3>
+          <p class="text-[11px] text-zinc-400">Hospedado 24h na nuvem • Pronto para instalar no computador da loja e no celular dos motoboys</p>
+        </div>
+        <button onclick="closeInstallAppModal()" class="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-red-600 text-xs font-bold cursor-pointer">✕</button>
+      </div>
+      <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+        <!-- COLUNA 1: APLICATIVO DO COMPUTADOR DA LOJA -->
+        <div class="p-3.5 rounded-xl bg-[#09090b] border border-amber-500/40 flex flex-col justify-between space-y-3">
+          <div class="space-y-2">
+            <div class="text-xs font-black uppercase text-amber-400">🖥️ 1. Aplicativo da Loja (PC / Notebook)</div>
+            <p class="text-[11px] text-zinc-300 leading-relaxed">
+              Instale o painel de entregas como um aplicativo próprio no Windows (sem barra de navegador, com ícone na Área de Trabalho e na Barra de Tarefas).
+            </p>
+            <div class="p-2 rounded-lg bg-[#14141c] border border-zinc-800 text-[10px] font-mono text-amber-300 break-all" id="store-app-url-box">
+              https://acheifacil25.github.io/iago-lanches-2-pelotas/
+            </div>
+          </div>
+          <div class="space-y-1.5">
+            <button onclick="triggerNativePwaInstall()" class="w-full py-2.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-black uppercase text-xs shadow cursor-pointer">
+              🖥️ Instalar Aplicativo neste Computador
+            </button>
+            <button onclick="copyAppLink('https://acheifacil25.github.io/iago-lanches-2-pelotas/')" class="w-full py-2 px-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-[11px] cursor-pointer">
+              📋 Copiar Link p/ Outro Computador
+            </button>
+          </div>
+        </div>
+
+        <!-- COLUNA 2: APLICATIVO DO CELULAR DOS MOTOBOYS -->
+        <div class="p-3.5 rounded-xl bg-[#09090b] border border-emerald-500/40 flex flex-col justify-between space-y-3">
+          <div class="space-y-2">
+            <div class="text-xs font-black uppercase text-emerald-400">🏍️ 2. Aplicativo do Motoboy (Celular)</div>
+            <p class="text-[11px] text-zinc-300 leading-relaxed">
+              O motoboy abre no celular, escolhe o nome dele e recebe as comandas, itens do pedido, rota GPS e botão de dar baixa em tempo real!
+            </p>
+            <div class="flex items-center justify-center bg-white p-2 rounded-xl w-32 h-32 mx-auto">
+              <img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&amp;data=https%3A%2F%2Facheifacil25.github.io%2Fiago-lanches-2-pelotas%2F%3Fapp%3Dmotoboy" alt="QR Code App Motoboy" class="w-28 h-28" />
+            </div>
+          </div>
+          <div class="space-y-1.5">
+            <button onclick="sendMotoboyAppLinkViaWhatsApp()" class="w-full py-2.5 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-black uppercase text-xs shadow cursor-pointer">
+              📲 Enviar App no WhatsApp do Motoboy
+            </button>
+            <button onclick="copyAppLink('https://acheifacil25.github.io/iago-lanches-2-pelotas/?app=motoboy')" class="w-full py-2 px-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-[11px] cursor-pointer">
+              📋 Copiar Link do App do Motoboy
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -1163,6 +1229,26 @@
         }).catch(() => {});
       } catch (e) {}
 
+      // Envia também em tempo real para o Aplicativo do Motoboy na nuvem (ntfy.sh)
+      try {
+        fetch(`https://ntfy.sh/${NTFY_TOPIC}`, {
+          method: "POST",
+          body: JSON.stringify({
+            type: "DISPATCH",
+            orderId: order.id,
+            ticket: String(order.ticket),
+            motoboyId: mb.id,
+            nome: mb.nome,
+            cliente: order.cliente,
+            endereco: order.endereco,
+            bairro: order.bairro,
+            itens: Array.isArray(order.itens) ? order.itens : [String(order.itens || "1x Pedido Facity")],
+            pagamento: order.pagamento || "Facity",
+            total: Number(order.total || 0).toFixed(2).replace(".", ",")
+          })
+        }).catch(() => {});
+      } catch (e) {}
+
       selectOrderOnMap(order.id);
       renderMotoboyFleet();
       renderWhatsAppPreviewBox();
@@ -1751,6 +1837,69 @@
     }
 
     const NTFY_TOPIC = "iagolanches2_pelotas_59453270000109";
+    let deferredPwaPrompt = null;
+
+    window.addEventListener("beforeinstallprompt", e => {
+      e.preventDefault();
+      deferredPwaPrompt = e;
+    });
+
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("sw.js").catch(() => {});
+      });
+    }
+
+    function openInstallAppModal() {
+      const m = document.getElementById("install-app-modal");
+      if (m) {
+        m.classList.remove("hidden");
+        m.classList.add("flex");
+      }
+    }
+
+    function closeInstallAppModal() {
+      const m = document.getElementById("install-app-modal");
+      if (m) {
+        m.classList.add("hidden");
+        m.classList.remove("flex");
+      }
+    }
+
+    async function triggerNativePwaInstall() {
+      if (deferredPwaPrompt) {
+        deferredPwaPrompt.prompt();
+        const choice = await deferredPwaPrompt.userChoice;
+        if (choice && choice.outcome === "accepted") {
+          showToast("✅ Aplicativo Iago Lanches 2 instalado com sucesso!");
+        }
+        deferredPwaPrompt = null;
+      } else {
+        showToast("💡 Para instalar no navegador: clique no ícone de computador/instalar na barra de endereço (canto superior direito) ou use o atalho 'Aplicativo Iago Lanches 2' na sua Área de Trabalho!");
+      }
+    }
+
+    function copyAppLink(url) {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(() => {
+          showToast("📋 Link do Aplicativo copiado! Cole no WhatsApp ou navegador.");
+        }).catch(() => {});
+      }
+    }
+
+    function sendMotoboyAppLinkViaWhatsApp() {
+      const mb = getMotoboyById(activeMotoboyId);
+      const cleanPhone = (mb.whatsapp || "").replace(/\D/g, "");
+      const fullPhone = cleanPhone.startsWith("55") ? cleanPhone : `55${cleanPhone}`;
+      const appUrl = `https://acheifacil25.github.io/iago-lanches-2-pelotas/?app=motoboy&motoboy=${encodeURIComponent(mb.id)}&nome=${encodeURIComponent(mb.nome)}`;
+      const msg = [
+        `🍔 *APLICATIVO DO MOTOBOY — IAGO LANCHES 2*`,
+        `Olá *${mb.nome}*! Abra o link abaixo para instalar e usar o seu Aplicativo de Entregas (mostra seus pedidos, itens, rota no Maps e botão de dar baixa):`,
+        ``,
+        appUrl
+      ].join("\n");
+      window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(msg)}`, "_blank");
+    }
 
     function startLiveMotoboyCloudListener() {
       try {
@@ -1774,7 +1923,7 @@
               const target = orders.find(o => o.id === payload.orderId || String(o.ticket) === String(payload.ticket));
               if (target) {
                 completeDelivery(target.id);
-                showToast(`📲 Motoboy ${payload.nome || ''} deu baixa pelo celular: Comanda #${payload.ticket} ENTREGUE!`);
+                showToast(`📲 Motoboy ${payload.nome || ''} deu baixa pelo Aplicativo: Comanda #${payload.ticket} ENTREGUE!`);
               }
             }
           } catch (err) {}
@@ -1784,42 +1933,152 @@
 
     function checkAndRenderMotoboyMobileScreen() {
       const params = new URLSearchParams(window.location.search);
-      const motoId = params.get("motoboy");
-      if (!motoId) return false;
+      const isAppMode = params.get("app") === "motoboy";
+      const urlMotoId = params.get("motoboy");
+      if (!isAppMode && !urlMotoId) return false;
 
-      const nome = params.get("nome") || "Motoboy";
-      const ticket = params.get("ticket") || "00";
-      const orderId = params.get("orderId") || `FAC-00${ticket}`;
-      const cliente = params.get("cliente") || "Cliente";
-      const endereco = params.get("endereco") || "Pelotas";
-      const bairro = params.get("bairro") || "Pelotas";
-      const total = params.get("total") || "0,00";
-      const pagamento = params.get("pagamento") || "Facity";
-      let itensRaw = params.get("itens") || "";
-      if (!itensRaw) {
-        const localOrd = orders.find(o => o.id === orderId || String(o.ticket) === String(ticket));
-        if (localOrd && Array.isArray(localOrd.itens)) itensRaw = localOrd.itens.join(" | ");
+      // Aponta o manifesto para o App do Motoboy
+      const manifestLink = document.getElementById("app-manifest-link");
+      if (manifestLink) manifestLink.setAttribute("href", "manifest-motoboy.json");
+
+      let myMotoId = urlMotoId || localStorage.getItem("iago_my_motoboy_id") || "MOTO-01";
+      localStorage.setItem("iago_my_motoboy_id", myMotoId);
+
+      function getMyMotoObj() {
+        return motoboys.find(m => m.id === myMotoId) || motoboys[0];
       }
-      const itensList = (itensRaw || "1x Pedido Facity").split("|").map(s => s.trim()).filter(Boolean);
-      const gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(STORE_BASE.address)}&destination=${encodeURIComponent(endereco + ", " + bairro + ", Pelotas - RS")}&travelmode=driving`;
 
-      document.body.innerHTML = `
-        <div class="min-h-screen bg-[#09090b] text-white p-4 flex flex-col justify-between max-w-md mx-auto">
-          <div class="space-y-3.5">
-            <div class="p-4 rounded-2xl bg-[#121218] border border-amber-500/40 flex items-center justify-between">
-              <div>
-                <div class="text-xs font-black uppercase text-amber-400">🍔 Iago Lanches 2 — Entrega</div>
-                <div class="text-lg font-black text-white mt-0.5">🏍️ ${nome}</div>
-              </div>
-              <span class="px-3 py-1 rounded-full bg-amber-500 text-black font-black text-sm">Comanda #${ticket}</span>
+      // Carrega lista de entregas ativas do motoboy no celular
+      let myDeliveries = [];
+      try {
+        myDeliveries = JSON.parse(localStorage.getItem("iago_moto_deliveries_" + myMotoId) || "[]");
+      } catch (e) { myDeliveries = []; }
+
+      function saveMyDeliveries() {
+        try {
+          localStorage.setItem("iago_moto_deliveries_" + myMotoId, JSON.stringify(myDeliveries));
+        } catch (e) {}
+      }
+
+      // Se abriu via link de uma comanda específica no WhatsApp, adiciona/atualiza na lista
+      const urlTicket = params.get("ticket");
+      if (urlTicket) {
+        const orderId = params.get("orderId") || `FAC-00${urlTicket}`;
+        const cliente = params.get("cliente") || "Cliente";
+        const endereco = params.get("endereco") || "Pelotas";
+        const bairro = params.get("bairro") || "Pelotas";
+        const total = params.get("total") || "0,00";
+        const pagamento = params.get("pagamento") || "Facity";
+        let itensRaw = params.get("itens") || "";
+        if (!itensRaw) {
+          const localOrd = orders.find(o => o.id === orderId || String(o.ticket) === String(urlTicket));
+          if (localOrd && Array.isArray(localOrd.itens)) itensRaw = localOrd.itens.join(" | ");
+        }
+        const itensList = (itensRaw || "1x Pedido Facity").split("|").map(s => s.trim()).filter(Boolean);
+        const existingIdx = myDeliveries.findIndex(d => String(d.ticket) === String(urlTicket));
+        const delObj = { orderId, ticket: String(urlTicket), cliente, endereco, bairro, total, pagamento, itens: itensList };
+        if (existingIdx >= 0) myDeliveries[existingIdx] = delObj;
+        else myDeliveries.unshift(delObj);
+        saveMyDeliveries();
+      }
+
+      let selectedTicket = urlTicket || (myDeliveries[0] ? myDeliveries[0].ticket : null);
+
+      window.onSelectMotoboyProfile = function(newMotoId) {
+        myMotoId = newMotoId;
+        localStorage.setItem("iago_my_motoboy_id", myMotoId);
+        try {
+          myDeliveries = JSON.parse(localStorage.getItem("iago_moto_deliveries_" + myMotoId) || "[]");
+        } catch (e) { myDeliveries = []; }
+        selectedTicket = myDeliveries[0] ? myDeliveries[0].ticket : null;
+        renderMotoboyAppUI();
+      };
+
+      window.onSelectMotoboyTicketTab = function(tk) {
+        selectedTicket = String(tk);
+        renderMotoboyAppUI();
+      };
+
+      window.installMotoboyAppOnPhone = async function() {
+        if (deferredPwaPrompt) {
+          deferredPwaPrompt.prompt();
+          await deferredPwaPrompt.userChoice;
+          deferredPwaPrompt = null;
+        } else {
+          alert("Para adicionar o Aplicativo na tela inicial do seu celular:\n\n• No Android (Chrome): toque nos 3 pontinhos (⋮) no canto superior direito e toque em 'Instalar aplicativo' ou 'Adicionar à tela inicial'.\n• No iPhone (Safari): toque em Compartilhar e depois em 'Adicionar à Tela de Início'.");
+        }
+      };
+
+      window.finishMotoboyDeliveryNow = async function(ticketToFinish) {
+        const cur = myDeliveries.find(d => String(d.ticket) === String(ticketToFinish));
+        if (!cur) return;
+        const btn = document.getElementById("btn-finish-delivery");
+        if (btn) {
+          btn.textContent = "⏳ AVISANDO A LOJA...";
+          btn.disabled = true;
+        }
+        const mbObj = getMyMotoObj();
+        try {
+          await fetch(`https://ntfy.sh/${NTFY_TOPIC}`, {
+            method: "POST",
+            body: JSON.stringify({
+              type: "DELIVERED",
+              orderId: cur.orderId,
+              ticket: cur.ticket,
+              motoboyId: myMotoId,
+              nome: mbObj.nome
+            })
+          });
+        } catch (e) {}
+        myDeliveries = myDeliveries.filter(d => String(d.ticket) !== String(ticketToFinish));
+        saveMyDeliveries();
+        selectedTicket = myDeliveries[0] ? myDeliveries[0].ticket : null;
+        renderMotoboyAppUI("✅ ENTREGA #" + cur.ticket + " CONCLUÍDA NA LOJA!");
+      };
+
+      function renderMotoboyAppUI(flashBanner = "") {
+        const mbObj = getMyMotoObj();
+        const cur = myDeliveries.find(d => String(d.ticket) === String(selectedTicket)) || myDeliveries[0] || null;
+        if (cur) selectedTicket = cur.ticket;
+
+        let contentHtml = "";
+        if (!cur) {
+          contentHtml = `
+            <div class="p-6 rounded-2xl bg-[#14141d] border border-zinc-800 text-center space-y-2 my-4">
+              <div class="text-3xl">🏍️</div>
+              <div class="text-sm font-black uppercase text-amber-400">Nenhuma entrega pendente com você agora</div>
+              <p class="text-xs text-zinc-400 leading-relaxed">
+                Assim que o caixa bipar uma comanda para <strong>${mbObj.nome}</strong> na loja, ela aparecerá automaticamente aqui na sua tela com os itens e a rota GPS!
+              </p>
             </div>
+          `;
+        } else {
+          const itensList = Array.isArray(cur.itens) ? cur.itens : String(cur.itens || "1x Pedido Facity").split("|");
+          const gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(STORE_BASE.address)}&destination=${encodeURIComponent(cur.endereco + ", " + cur.bairro + ", Pelotas - RS")}&travelmode=driving`;
+          contentHtml = `
+            ${
+              myDeliveries.length > 1
+                ? `<div class="flex items-center gap-1.5 overflow-x-auto pb-1">
+                     ${myDeliveries.map(d => `
+                       <button onclick="window.onSelectMotoboyTicketTab('${d.ticket}')"
+                               class="px-3 py-1.5 rounded-xl font-black text-xs whitespace-nowrap cursor-pointer ${String(d.ticket) === String(cur.ticket) ? 'bg-amber-500 text-black shadow' : 'bg-[#14141d] text-zinc-300 border border-zinc-800'}">
+                         Comanda #${d.ticket}
+                       </button>
+                     `).join("")}
+                   </div>`
+                : ``
+            }
 
             <div class="p-4 rounded-2xl bg-[#14141d] border border-zinc-800 space-y-2.5">
-              <div>
-                <div class="text-[11px] text-zinc-400 uppercase font-bold">Cliente &amp; Endereço:</div>
-                <div class="text-base font-black text-white mt-0.5">👤 ${cliente}</div>
-                <div class="text-sm font-bold text-amber-300 mt-0.5">📍 ${endereco} — ${bairro}</div>
+              <div class="flex items-center justify-between border-b border-zinc-800 pb-2">
+                <div>
+                  <div class="text-[11px] text-zinc-400 uppercase font-bold">Cliente &amp; Endereço:</div>
+                  <div class="text-base font-black text-white mt-0.5">👤 ${cur.cliente}</div>
+                </div>
+                <span class="px-3 py-1 rounded-full bg-amber-500 text-black font-black text-sm">Comanda #${cur.ticket}</span>
               </div>
+
+              <div class="text-sm font-bold text-amber-300">📍 ${cur.endereco} — ${cur.bairro}</div>
 
               <div class="pt-2.5 border-t border-zinc-800">
                 <div class="text-[11px] text-zinc-400 uppercase font-bold mb-1.5">🍔 Itens do Pedido:</div>
@@ -1835,11 +2094,11 @@
               <div class="pt-2.5 border-t border-zinc-800 flex items-center justify-between">
                 <div>
                   <div class="text-[10px] text-zinc-400 uppercase">Pagamento:</div>
-                  <div class="text-xs font-bold text-zinc-200">💳 ${pagamento}</div>
+                  <div class="text-xs font-bold text-zinc-200">💳 ${cur.pagamento}</div>
                 </div>
                 <div class="text-right">
                   <div class="text-[10px] text-zinc-400 uppercase">Total Facity:</div>
-                  <div class="text-base font-black text-emerald-400">R$ ${total}</div>
+                  <div class="text-base font-black text-emerald-400">R$ ${cur.total}</div>
                 </div>
               </div>
             </div>
@@ -1849,41 +2108,100 @@
               🗺️ 1. ABRIR ROTA NO GOOGLE MAPS
             </a>
 
-            <button id="btn-finish-delivery" onclick="window.finishMotoboyDeliveryNow()"
+            <button id="btn-finish-delivery" onclick="window.finishMotoboyDeliveryNow('${cur.ticket}')"
                     class="w-full py-5 px-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black font-black text-center text-base uppercase shadow-2xl cursor-pointer">
               ✅ 2. JÁ ENTREGUEI O PEDIDO (DAR BAIXA)
             </button>
+          `;
+        }
+
+        document.body.innerHTML = `
+          <div class="min-h-screen bg-[#09090b] text-white p-4 flex flex-col justify-between max-w-md mx-auto">
+            <div class="space-y-3.5">
+              <!-- TOPO DO APLICATIVO DO MOTOBOY -->
+              <div class="p-3.5 rounded-2xl bg-[#121218] border border-amber-500/40 space-y-2.5">
+                <div class="flex items-center justify-between gap-2">
+                  <div>
+                    <div class="text-[11px] font-black uppercase text-amber-400">🍔 App Motoboy • Iago Lanches 2</div>
+                    <div class="text-xs text-zinc-400">Entregas em tempo real</div>
+                  </div>
+                  <button onclick="window.installMotoboyAppOnPhone()"
+                          class="px-2.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 font-black text-[11px] uppercase cursor-pointer">
+                    📲 Instalar App
+                  </button>
+                </div>
+
+                <div class="flex items-center gap-2 pt-1 border-t border-zinc-800/80">
+                  <span class="text-[11px] font-bold text-zinc-400 whitespace-nowrap">🏍️ Você é:</span>
+                  <select onchange="window.onSelectMotoboyProfile(this.value)"
+                          class="flex-1 bg-[#09090b] text-amber-300 font-black text-xs px-2.5 py-1.5 rounded-xl border border-amber-500/40">
+                    ${motoboys.map(m => `
+                      <option value="${m.id}" ${m.id === myMotoId ? 'selected' : ''}>🏍️ ${m.nome}</option>
+                    `).join("")}
+                  </select>
+                </div>
+              </div>
+
+              ${
+                flashBanner
+                  ? `<div class="p-3 rounded-xl bg-emerald-950/90 border border-emerald-500 text-emerald-300 text-xs font-black text-center">${flashBanner}</div>`
+                  : ``
+              }
+
+              ${contentHtml}
+            </div>
+
+            <div class="text-center text-[11px] text-zinc-500 pt-6">
+              Iago Lanches 2 • Av. Fernando Osório, 2870 — Pelotas/RS
+            </div>
           </div>
+        `;
+      }
 
-          <div class="text-center text-[11px] text-zinc-500 pt-6">
-            Iago Lanches 2 • Av. Fernando Osório, 2870 — Pelotas/RS
-          </div>
-        </div>
-      `;
+      renderMotoboyAppUI();
 
-      window.finishMotoboyDeliveryNow = async function() {
-        const btn = document.getElementById("btn-finish-delivery");
-        btn.textContent = "⏳ AVISANDO A LOJA...";
-        btn.disabled = true;
-        try {
-          await fetch(`https://ntfy.sh/${NTFY_TOPIC}`, {
-            method: "POST",
-            body: JSON.stringify({ type: "DELIVERED", orderId, ticket, motoboyId: motoId, nome })
-          });
-        } catch (e) {}
-        btn.className = "w-full py-5 px-4 rounded-2xl bg-zinc-800 text-emerald-400 border-2 border-emerald-500 font-black text-center text-base uppercase";
-        btn.textContent = "✅ ENTREGA CONCLUÍDA NA LOJA!";
-      };
+      // Escuta em tempo real pela nuvem novas comandas bipadas para este motoboy na loja
+      try {
+        const esMoto = new EventSource(`https://ntfy.sh/${NTFY_TOPIC}/sse`);
+        esMoto.onmessage = evt => {
+          try {
+            const outer = JSON.parse(evt.data);
+            if (!outer || !outer.message) return;
+            const payload = JSON.parse(outer.message);
+            if (payload.type === "DISPATCH" && payload.motoboyId === myMotoId) {
+              const newDel = {
+                orderId: payload.orderId || `FAC-00${payload.ticket}`,
+                ticket: String(payload.ticket),
+                cliente: payload.cliente || "Cliente",
+                endereco: payload.endereco || "Pelotas",
+                bairro: payload.bairro || "Pelotas",
+                itens: Array.isArray(payload.itens) ? payload.itens : [String(payload.itens || "1x Pedido Facity")],
+                pagamento: payload.pagamento || "Facity",
+                total: payload.total || "0,00"
+              };
+              const idx = myDeliveries.findIndex(d => String(d.ticket) === String(newDel.ticket));
+              if (idx >= 0) myDeliveries[idx] = newDel;
+              else myDeliveries.unshift(newDel);
+              saveMyDeliveries();
+              selectedTicket = newDel.ticket;
+              if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+              renderMotoboyAppUI(`🔔 NOVA ENTREGA RECEBIDA: COMANDA #${newDel.ticket}!`);
+            }
+          } catch (err) {}
+        };
+      } catch (e) {}
 
+      // Envia silenciosamente a geolocalização em segundo plano para o mapa da loja (sem aviso na tela)
       if (navigator.geolocation) {
         navigator.geolocation.watchPosition(pos => {
+          const mbObj = getMyMotoObj();
           fetch(`https://ntfy.sh/${NTFY_TOPIC}`, {
             method: "POST",
             body: JSON.stringify({
               type: "GPS",
-              motoboyId: motoId,
-              nome,
-              ticket,
+              motoboyId: myMotoId,
+              nome: mbObj.nome,
+              ticket: selectedTicket || "00",
               lat: pos.coords.latitude,
               lng: pos.coords.longitude
             })
