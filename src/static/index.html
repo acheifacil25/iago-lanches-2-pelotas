@@ -1106,6 +1106,7 @@
         : `Av. Fernando Osório ➔ ${order.endereco}`;
 
       const gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(STORE_BASE.address)}&destination=${encodeURIComponent(order.endereco + ", " + order.bairro + ", Pelotas - RS")}&travelmode=driving`;
+      const motoboyPortalUrl = `https://acheifacil25.github.io/iago-lanches-2-pelotas/?motoboy=${encodeURIComponent(mb.id)}&nome=${encodeURIComponent(mb.nome)}&ticket=${encodeURIComponent(order.ticket)}&orderId=${encodeURIComponent(order.id)}&cliente=${encodeURIComponent(order.cliente)}&endereco=${encodeURIComponent(order.endereco)}&bairro=${encodeURIComponent(order.bairro)}&total=${encodeURIComponent(total)}`;
 
       const textLines = [
         `🍔 *IAGO LANCHES 2 — ENTREGA DESPACHADA*`,
@@ -1118,13 +1119,16 @@
         `💳 *Pagamento:* ${order.pagamento}`,
         `💰 *TOTAL FACITY: R$ ${total}*`,
         ``,
-        `🗺️ *ABRIR ROTA NO GOOGLE MAPS (1 CLIQUE):*`,
+        `✅ *ABRIR GPS + DAR BAIXA QUANDO ENTREGAR:*`,
+        motoboyPortalUrl,
+        ``,
+        `🗺️ *ROTA DIRETA NO GOOGLE MAPS:*`,
         gmapsUrl
       ];
 
       const rawText = textLines.join("\n");
       const waUrl = `https://wa.me/${fullPhone}?text=${encodeURIComponent(rawText)}`;
-      return { rawText, waUrl, gmapsUrl, viaRuas, total, fullPhone };
+      return { rawText, waUrl, gmapsUrl, motoboyPortalUrl, viaRuas, total, fullPhone };
     }
 
     async function beepAndSendWhatsApp(order, mb) {
@@ -1746,7 +1750,130 @@
       window._toastTimer = setTimeout(() => box.classList.add("hidden"), 4500);
     }
 
+    const NTFY_TOPIC = "iagolanches2_pelotas_59453270000109";
+
+    function startLiveMotoboyCloudListener() {
+      try {
+        const es = new EventSource(`https://ntfy.sh/${NTFY_TOPIC}/sse`);
+        es.onmessage = evt => {
+          try {
+            const outer = JSON.parse(evt.data);
+            if (!outer || !outer.message) return;
+            const payload = JSON.parse(outer.message);
+            if (payload.type === "GPS" && payload.motoboyId && payload.lat && payload.lng) {
+              const mb = motoboys.find(m => m.id === payload.motoboyId);
+              if (mb) {
+                mb.liveGps = { lat: Number(payload.lat), lng: Number(payload.lng), updatedAt: Date.now() };
+                mb.lat = Number(payload.lat);
+                mb.lng = Number(payload.lng);
+                mb.status = "EM_ROTA";
+                renderMotoboysLiveMapBar();
+                drawPelotasMap();
+              }
+            } else if (payload.type === "DELIVERED") {
+              const target = orders.find(o => o.id === payload.orderId || String(o.ticket) === String(payload.ticket));
+              if (target) {
+                completeDelivery(target.id);
+                showToast(`📲 Motoboy ${payload.nome || ''} deu baixa pelo celular: Comanda #${payload.ticket} ENTREGUE!`);
+              }
+            }
+          } catch (err) {}
+        };
+      } catch (e) {}
+    }
+
+    function checkAndRenderMotoboyMobileScreen() {
+      const params = new URLSearchParams(window.location.search);
+      const motoId = params.get("motoboy");
+      if (!motoId) return false;
+
+      const nome = params.get("nome") || "Motoboy";
+      const ticket = params.get("ticket") || "00";
+      const orderId = params.get("orderId") || `FAC-00${ticket}`;
+      const cliente = params.get("cliente") || "Cliente";
+      const endereco = params.get("endereco") || "Pelotas";
+      const bairro = params.get("bairro") || "Pelotas";
+      const total = params.get("total") || "0,00";
+      const gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(STORE_BASE.address)}&destination=${encodeURIComponent(endereco + ", " + bairro + ", Pelotas - RS")}&travelmode=driving`;
+
+      document.body.innerHTML = `
+        <div class="min-h-screen bg-[#09090b] text-white p-4 flex flex-col justify-between max-w-md mx-auto">
+          <div class="space-y-4">
+            <div class="p-4 rounded-2xl bg-[#121218] border border-amber-500/40 flex items-center justify-between">
+              <div>
+                <div class="text-xs font-black uppercase text-amber-400">🍔 Iago Lanches 2 — Tela do Motoboy</div>
+                <div class="text-lg font-black text-white mt-0.5">🏍️ ${nome}</div>
+              </div>
+              <span class="px-3 py-1 rounded-full bg-amber-500 text-black font-black text-sm">Comanda #${ticket}</span>
+            </div>
+
+            <div id="moto-gps-status" class="p-3 rounded-xl bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 text-xs font-bold flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+              <span>📡 GPS Ao Vivo Conectado — A loja está vendo sua posição no mapa</span>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-[#14141d] border border-zinc-800 space-y-2">
+              <div class="text-xs text-zinc-400 uppercase font-bold">Dados da Entrega:</div>
+              <div class="text-base font-black text-white">👤 ${cliente}</div>
+              <div class="text-sm font-bold text-amber-300">📍 ${endereco} — ${bairro}</div>
+              <div class="pt-2 border-t border-zinc-800 flex items-center justify-between">
+                <span class="text-xs text-zinc-400">Valor Facity:</span>
+                <span class="text-base font-black text-emerald-400">R$ ${total}</span>
+              </div>
+            </div>
+
+            <a href="${gmapsUrl}" target="_blank"
+               class="block w-full py-4 px-4 rounded-2xl bg-amber-500 hover:bg-amber-400 text-black font-black text-center text-sm uppercase shadow-xl">
+              🗺️ 1. ABRIR ROTA NO GOOGLE MAPS
+            </a>
+
+            <button id="btn-finish-delivery" onclick="window.finishMotoboyDeliveryNow()"
+                    class="w-full py-5 px-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black font-black text-center text-base uppercase shadow-2xl cursor-pointer">
+              ✅ 2. JÁ ENTREGUEI O PEDIDO (DAR BAIXA)
+            </button>
+          </div>
+
+          <div class="text-center text-[11px] text-zinc-500 pt-6">
+            Iago Lanches 2 • Av. Fernando Osório, 2870 — Pelotas/RS
+          </div>
+        </div>
+      `;
+
+      window.finishMotoboyDeliveryNow = async function() {
+        const btn = document.getElementById("btn-finish-delivery");
+        btn.textContent = "⏳ AVISANDO A LOJA...";
+        btn.disabled = true;
+        try {
+          await fetch(`https://ntfy.sh/${NTFY_TOPIC}`, {
+            method: "POST",
+            body: JSON.stringify({ type: "DELIVERED", orderId, ticket, motoboyId: motoId, nome })
+          });
+        } catch (e) {}
+        btn.className = "w-full py-5 px-4 rounded-2xl bg-zinc-800 text-emerald-400 border-2 border-emerald-500 font-black text-center text-base uppercase";
+        btn.textContent = "✅ ENTREGA CONCLUÍDA NA LOJA!";
+      };
+
+      if (navigator.geolocation) {
+        navigator.geolocation.watchPosition(pos => {
+          fetch(`https://ntfy.sh/${NTFY_TOPIC}`, {
+            method: "POST",
+            body: JSON.stringify({
+              type: "GPS",
+              motoboyId: motoId,
+              nome,
+              ticket,
+              lat: pos.coords.latitude,
+              lng: pos.coords.longitude
+            })
+          }).catch(() => {});
+        }, () => {}, { enableHighAccuracy: true, maximumAge: 5000 });
+      }
+      return true;
+    }
+
     window.addEventListener("DOMContentLoaded", () => {
+      if (checkAndRenderMotoboyMobileScreen()) return;
+      startLiveMotoboyCloudListener();
       populateModals();
       renderOrdersQueue();
       renderMotoboyFleet();
