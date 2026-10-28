@@ -1,37 +1,30 @@
-const CACHE_NAME = 'iago-lanches-2-app-v3';
-const ASSETS = [
-  './',
-  './index.html',
-  './manifest.json',
-  './manifest-motoboy.json',
-  './icon-192.png',
-  './icon-512.png'
-];
+const CACHE_NAME = 'iago-lanches-2-app-v5';
 
 self.addEventListener('install', event => {
   self.skipWaiting();
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS).catch(() => {}))
-  );
 });
 
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys => Promise.all(
-      keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
+      keys.map(k => caches.delete(k))
     )).then(() => self.clients.claim())
   );
 });
 
 self.addEventListener('fetch', event => {
-  if (event.request.method !== 'GET') return;
+  const url = event.request.url || '';
+  // Nunca intercepta ntfy.sh (SSE / Poll), API Facity, tiles do Google Maps ou POSTs
+  if (
+    event.request.method !== 'GET' ||
+    !url.startsWith(self.location.origin) ||
+    url.includes('ntfy.sh') ||
+    url.includes('facity.com.br') ||
+    url.includes('google.com')
+  ) {
+    return;
+  }
   event.respondWith(
-    fetch(event.request)
-      .then(response => {
-        const copy = response.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy)).catch(() => {});
-        return response;
-      })
-      .catch(() => caches.match(event.request))
+    fetch(event.request, { cache: 'no-store' }).catch(() => caches.match(event.request))
   );
 });

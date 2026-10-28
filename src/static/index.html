@@ -1229,25 +1229,23 @@
         }).catch(() => {});
       } catch (e) {}
 
-      // Envia também em tempo real para o Aplicativo do Motoboy na nuvem (ntfy.sh)
-      try {
-        fetch(`https://ntfy.sh/${NTFY_TOPIC}`, {
-          method: "POST",
-          body: JSON.stringify({
-            type: "DISPATCH",
-            orderId: order.id,
-            ticket: String(order.ticket),
-            motoboyId: mb.id,
-            nome: mb.nome,
-            cliente: order.cliente,
-            endereco: order.endereco,
-            bairro: order.bairro,
-            itens: Array.isArray(order.itens) ? order.itens : [String(order.itens || "1x Pedido Facity")],
-            pagamento: order.pagamento || "Facity",
-            total: Number(order.total || 0).toFixed(2).replace(".", ",")
-          })
-        }).catch(() => {});
-      } catch (e) {}
+      // Envia também em tempo real para o Aplicativo do Motoboy na nuvem (canal exclusivo de comandos + local)
+      const dispatchPayload = {
+        type: "DISPATCH",
+        orderId: order.id,
+        ticket: String(order.ticket),
+        motoboyId: mb.id,
+        nome: mb.nome,
+        cliente: order.cliente,
+        endereco: order.endereco,
+        bairro: order.bairro,
+        itens: Array.isArray(order.itens) ? order.itens : [String(order.itens || "1x Pedido Facity")],
+        pagamento: order.pagamento || "Facity",
+        total: Number(order.total || 0).toFixed(2).replace(".", ","),
+        ts: Date.now()
+      };
+      publishCloudCommand(dispatchPayload);
+      saveActiveOrdersToStorage();
 
       selectOrderOnMap(order.id);
       renderMotoboyFleet();
@@ -1518,22 +1516,63 @@
       savedDel.forEach(t => deliveredTickets.add(String(t)));
     } catch (e) {}
 
-    function completeDelivery(orderId) {
-      const idx = orders.findIndex(o => o.id === orderId);
-      if (idx === -1) return;
+    function saveActiveOrdersToStorage() {
+      try {
+        localStorage.setItem("iago_active_orders_v3", JSON.stringify(orders));
+      } catch (e) {}
+    }
+
+    function loadActiveOrdersFromStorage() {
+      try {
+        const saved = JSON.parse(localStorage.getItem("iago_active_orders_v3") || "null");
+        if (Array.isArray(saved) && saved.length > 0) {
+          saved.forEach(so => {
+            if (deliveredTickets.has(String(so.ticket)) || deliveredTickets.has(String(so.id))) return;
+            const existingIdx = orders.findIndex(o => String(o.ticket) === String(so.ticket) || o.id === so.id);
+            if (existingIdx >= 0) {
+              orders[existingIdx] = so;
+            } else {
+              orders.unshift(so);
+            }
+          });
+        }
+        // Remove qualquer pedido que já tenha recebido baixa anteriormente
+        orders = orders.filter(o => !deliveredTickets.has(String(o.ticket)) && !deliveredTickets.has(String(o.id)));
+      } catch (e) {}
+    }
+
+    function completeDelivery(orderIdOrTicket, silentToast = false) {
+      const cleanTk = String(orderIdOrTicket || "").replace(/^FAC-00/i, "").replace(/\D/g, "");
+      const idx = orders.findIndex(o =>
+        String(o.id) === String(orderIdOrTicket) ||
+        String(o.ticket) === String(orderIdOrTicket) ||
+        (cleanTk && String(o.ticket) === cleanTk)
+      );
+      if (idx === -1) return false;
       const o = orders[idx];
       deliveredTickets.add(String(o.ticket));
       deliveredTickets.add(String(o.id));
       try { localStorage.setItem("iago_delivered_tickets", JSON.stringify(Array.from(deliveredTickets))); } catch (e) {}
-      const mb = getMotoboyById(o.motoboyId);
-      if (mb) mb.status = "DISPONIVEL_BALCAO";
+      const mId = o.motoboyId;
       orders.splice(idx, 1);
+      if (mId) {
+        const mb = getMotoboyById(mId);
+        const stillHasOrders = orders.some(x => x.motoboyId === mId && x.status === "EM_ROTA");
+        if (mb && !stillHasOrders) {
+          mb.status = "DISPONIVEL_BALCAO";
+          mb.liveGps = null;
+        }
+      }
+      saveActiveOrdersToStorage();
       lastWhatsAppDispatch = null;
       selectedOrderId = orders[0] ? orders[0].id : null;
       renderOrdersQueue();
       renderMotoboyFleet();
       drawPelotasMap();
-      showToast(`✅ Entrega da Comanda #${o.ticket} concluída!`);
+      if (!silentToast) {
+        showToast(`✅ Entrega da Comanda #${o.ticket} concluída!`);
+      }
+      return true;
     }
 
     function renderWhatsAppModalRows() {
@@ -1717,6 +1756,7 @@
         waitMinutes: waitMins, status: "AGUARDANDO_DESPACHO", motoboyId: null, motoboyNome: null
       });
       closeNewOrderModal();
+      saveActiveOrdersToStorage();
       selectOrderOnMap(newId);
       renderMotoboyFleet();
       showToast(`✅ Pedido #${nextTicket} (${originVal === 'ifood' ? 'iFood • Facity' : 'Facity'}) lançado na fila!`);
@@ -1837,7 +1877,15 @@
     }
 
     const NTFY_TOPIC = "iagolanches2_pelotas_59453270000109";
+    const NTFY_CMD_TOPIC = "iagolanches2_cmd_59453270000109";
     let deferredPwaPrompt = null;
+    const processedCloudIds = new Set();
+    let localSyncChannel = null;
+    try {
+      if (typeof BroadcastChannel !== "undefined") {
+        localSyncChannel = new BroadcastChannel("iago_lanches_2_sync_channel");
+      }
+    } catch (e) {}
 
     window.addEventListener("beforeinstallprompt", e => {
       e.preventDefault();
@@ -1846,8 +1894,34 @@
 
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
-        navigator.serviceWorker.register("sw.js").catch(() => {});
+        navigator.serviceWorker.register("sw.js?v=5").then(reg => {
+          reg.update().catch(() => {});
+        }).catch(() => {});
       });
+    }
+
+    async function publishCloudCommand(payload) {
+      const jsonStr = JSON.stringify(payload);
+      // 1. Disparo local instantâneo (caso haja mais de uma aba/janela no mesmo PC)
+      try {
+        if (localSyncChannel) localSyncChannel.postMessage(payload);
+        localStorage.setItem("iago_last_cloud_cmd", jsonStr);
+      } catch (e) {}
+
+      // 2. Disparo na nuvem com retry no canal prioritário de comandos e no canal principal
+      for (const topic of [NTFY_CMD_TOPIC, NTFY_TOPIC]) {
+        for (let attempt = 0; attempt < 2; attempt++) {
+          try {
+            const r = await fetch(`https://ntfy.sh/${topic}`, {
+              method: "POST",
+              headers: { "Content-Type": "text/plain;charset=UTF-8", "Cache-Control": "no-cache" },
+              body: jsonStr
+            });
+            if (r.ok) break;
+          } catch (err) {}
+          await new Promise(res => setTimeout(res, 400));
+        }
+      }
     }
 
     function openInstallAppModal() {
@@ -1901,34 +1975,83 @@
       window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(msg)}`, "_blank");
     }
 
+    function handleStoreIncomingPayload(payload, msgId = "") {
+      if (!payload || !payload.type) return;
+      if (msgId && processedCloudIds.has(msgId)) return;
+      if (msgId) processedCloudIds.add(msgId);
+
+      if (payload.type === "GPS" && payload.motoboyId && payload.lat && payload.lng) {
+        const mb = motoboys.find(m => m.id === payload.motoboyId);
+        if (mb) {
+          mb.liveGps = { lat: Number(payload.lat), lng: Number(payload.lng), updatedAt: Date.now() };
+          mb.lat = Number(payload.lat);
+          mb.lng = Number(payload.lng);
+          mb.status = "EM_ROTA";
+          renderMotoboysLiveMapBar();
+          drawPelotasMap();
+        }
+      } else if (payload.type === "DELIVERED") {
+        const cleanTk = String(payload.ticket || "").replace(/^FAC-00/i, "").replace(/\D/g, "");
+        const didComplete = completeDelivery(payload.orderId || cleanTk || payload.ticket, true);
+        if (didComplete) {
+          showToast(`📲 Motoboy ${payload.nome || ''} deu baixa pelo Aplicativo: Comanda #${cleanTk || payload.ticket} ENTREGUE!`);
+        }
+      }
+    }
+
+    async function pollCloudMessagesForStore() {
+      for (const topic of [NTFY_CMD_TOPIC, NTFY_TOPIC]) {
+        try {
+          const resp = await fetch(`https://ntfy.sh/${topic}/json?poll=1&since=20m`, { cache: "no-store" });
+          if (!resp.ok) continue;
+          const text = await resp.text();
+          const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+          for (const line of lines) {
+            try {
+              const outer = JSON.parse(line);
+              if (outer && outer.event === "message" && outer.message) {
+                const payload = JSON.parse(outer.message);
+                handleStoreIncomingPayload(payload, outer.id || "");
+              }
+            } catch (e) {}
+          }
+        } catch (err) {}
+      }
+    }
+
     function startLiveMotoboyCloudListener() {
-      try {
-        const es = new EventSource(`https://ntfy.sh/${NTFY_TOPIC}/sse`);
-        es.onmessage = evt => {
-          try {
-            const outer = JSON.parse(evt.data);
-            if (!outer || !outer.message) return;
-            const payload = JSON.parse(outer.message);
-            if (payload.type === "GPS" && payload.motoboyId && payload.lat && payload.lng) {
-              const mb = motoboys.find(m => m.id === payload.motoboyId);
-              if (mb) {
-                mb.liveGps = { lat: Number(payload.lat), lng: Number(payload.lng), updatedAt: Date.now() };
-                mb.lat = Number(payload.lat);
-                mb.lng = Number(payload.lng);
-                mb.status = "EM_ROTA";
-                renderMotoboysLiveMapBar();
-                drawPelotasMap();
-              }
-            } else if (payload.type === "DELIVERED") {
-              const target = orders.find(o => o.id === payload.orderId || String(o.ticket) === String(payload.ticket));
-              if (target) {
-                completeDelivery(target.id);
-                showToast(`📲 Motoboy ${payload.nome || ''} deu baixa pelo Aplicativo: Comanda #${payload.ticket} ENTREGUE!`);
-              }
-            }
-          } catch (err) {}
+      // 1. Listener local imediato (BroadcastChannel & Storage)
+      if (localSyncChannel) {
+        localSyncChannel.onmessage = e => {
+          if (e && e.data) handleStoreIncomingPayload(e.data);
         };
-      } catch (e) {}
+      }
+      window.addEventListener("storage", e => {
+        if (e.key === "iago_last_cloud_cmd" && e.newValue) {
+          try {
+            handleStoreIncomingPayload(JSON.parse(e.newValue));
+          } catch (err) {}
+        }
+      });
+
+      // 2. Stream SSE em tempo real (canal de comandos + canal principal)
+      [NTFY_CMD_TOPIC, NTFY_TOPIC].forEach(topic => {
+        try {
+          const es = new EventSource(`https://ntfy.sh/${topic}/sse`);
+          es.onmessage = evt => {
+            try {
+              const outer = JSON.parse(evt.data);
+              if (!outer || !outer.message) return;
+              const payload = JSON.parse(outer.message);
+              handleStoreIncomingPayload(payload, outer.id || "");
+            } catch (err) {}
+          };
+        } catch (e) {}
+      });
+
+      // 3. Polling HTTP ativo a cada 2.5 segundos (garantia 100% contra queda de SSE ou bloqueio de rede)
+      pollCloudMessagesForStore();
+      setInterval(pollCloudMessagesForStore, 2500);
     }
 
     function checkAndRenderMotoboyMobileScreen() {
@@ -1954,6 +2077,12 @@
         myDeliveries = JSON.parse(localStorage.getItem("iago_moto_deliveries_" + myMotoId) || "[]");
       } catch (e) { myDeliveries = []; }
 
+      let finishedMotoTickets = new Set();
+      try {
+        const savedFin = JSON.parse(localStorage.getItem("iago_moto_finished_tickets") || "[]");
+        savedFin.forEach(t => finishedMotoTickets.add(String(t)));
+      } catch (e) {}
+
       function saveMyDeliveries() {
         try {
           localStorage.setItem("iago_moto_deliveries_" + myMotoId, JSON.stringify(myDeliveries));
@@ -1962,7 +2091,7 @@
 
       // Se abriu via link de uma comanda específica no WhatsApp, adiciona/atualiza na lista
       const urlTicket = params.get("ticket");
-      if (urlTicket) {
+      if (urlTicket && !finishedMotoTickets.has(String(urlTicket))) {
         const orderId = params.get("orderId") || `FAC-00${urlTicket}`;
         const cliente = params.get("cliente") || "Cliente";
         const endereco = params.get("endereco") || "Pelotas";
@@ -1992,6 +2121,7 @@
         } catch (e) { myDeliveries = []; }
         selectedTicket = myDeliveries[0] ? myDeliveries[0].ticket : null;
         renderMotoboyAppUI();
+        pollMotoDeliveriesFromCloud();
       };
 
       window.onSelectMotoboyTicketTab = function(tk) {
@@ -2010,30 +2140,35 @@
       };
 
       window.finishMotoboyDeliveryNow = async function(ticketToFinish) {
-        const cur = myDeliveries.find(d => String(d.ticket) === String(ticketToFinish));
-        if (!cur) return;
+        const cur = myDeliveries.find(d => String(d.ticket) === String(ticketToFinish)) || {
+          orderId: `FAC-00${ticketToFinish}`,
+          ticket: String(ticketToFinish)
+        };
         const btn = document.getElementById("btn-finish-delivery");
         if (btn) {
-          btn.textContent = "⏳ AVISANDO A LOJA...";
+          btn.textContent = "⏳ DANDO BAIXA NA LOJA...";
           btn.disabled = true;
         }
         const mbObj = getMyMotoObj();
+        const cleanTk = String(cur.ticket).replace(/^FAC-00/i, "").replace(/\D/g, "") || String(cur.ticket);
+        finishedMotoTickets.add(String(cleanTk));
         try {
-          await fetch(`https://ntfy.sh/${NTFY_TOPIC}`, {
-            method: "POST",
-            body: JSON.stringify({
-              type: "DELIVERED",
-              orderId: cur.orderId,
-              ticket: cur.ticket,
-              motoboyId: myMotoId,
-              nome: mbObj.nome
-            })
-          });
+          localStorage.setItem("iago_moto_finished_tickets", JSON.stringify(Array.from(finishedMotoTickets)));
         } catch (e) {}
-        myDeliveries = myDeliveries.filter(d => String(d.ticket) !== String(ticketToFinish));
+
+        await publishCloudCommand({
+          type: "DELIVERED",
+          orderId: cur.orderId || `FAC-00${cleanTk}`,
+          ticket: String(cleanTk),
+          motoboyId: myMotoId,
+          nome: mbObj.nome,
+          ts: Date.now()
+        });
+
+        myDeliveries = myDeliveries.filter(d => String(d.ticket) !== String(ticketToFinish) && String(d.ticket) !== String(cleanTk));
         saveMyDeliveries();
         selectedTicket = myDeliveries[0] ? myDeliveries[0].ticket : null;
-        renderMotoboyAppUI("✅ ENTREGA #" + cur.ticket + " CONCLUÍDA NA LOJA!");
+        renderMotoboyAppUI("✅ ENTREGA #" + cleanTk + " CONCLUÍDA NA LOJA!");
       };
 
       function renderMotoboyAppUI(flashBanner = "") {
@@ -2158,42 +2293,83 @@
         `;
       }
 
-      renderMotoboyAppUI();
+      function handleMotoIncomingDispatch(payload) {
+        if (!payload || payload.type !== "DISPATCH" || payload.motoboyId !== myMotoId) return;
+        const cleanTk = String(payload.ticket || "").replace(/^FAC-00/i, "").replace(/\D/g, "") || String(payload.ticket);
+        if (finishedMotoTickets.has(cleanTk)) return;
+        const newDel = {
+          orderId: payload.orderId || `FAC-00${cleanTk}`,
+          ticket: String(cleanTk),
+          cliente: payload.cliente || "Cliente",
+          endereco: payload.endereco || "Pelotas",
+          bairro: payload.bairro || "Pelotas",
+          itens: Array.isArray(payload.itens) ? payload.itens : [String(payload.itens || "1x Pedido Facity")],
+          pagamento: payload.pagamento || "Facity",
+          total: payload.total || "0,00"
+        };
+        const idx = myDeliveries.findIndex(d => String(d.ticket) === String(newDel.ticket));
+        const isNew = idx === -1;
+        if (idx >= 0) myDeliveries[idx] = newDel;
+        else myDeliveries.unshift(newDel);
+        saveMyDeliveries();
+        if (isNew) {
+          selectedTicket = newDel.ticket;
+          if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+          renderMotoboyAppUI(`🔔 NOVA ENTREGA RECEBIDA: COMANDA #${newDel.ticket}!`);
+        }
+      }
 
-      // Escuta em tempo real pela nuvem novas comandas bipadas para este motoboy na loja
-      try {
-        const esMoto = new EventSource(`https://ntfy.sh/${NTFY_TOPIC}/sse`);
-        esMoto.onmessage = evt => {
+      async function pollMotoDeliveriesFromCloud() {
+        for (const topic of [NTFY_CMD_TOPIC, NTFY_TOPIC]) {
           try {
-            const outer = JSON.parse(evt.data);
-            if (!outer || !outer.message) return;
-            const payload = JSON.parse(outer.message);
-            if (payload.type === "DISPATCH" && payload.motoboyId === myMotoId) {
-              const newDel = {
-                orderId: payload.orderId || `FAC-00${payload.ticket}`,
-                ticket: String(payload.ticket),
-                cliente: payload.cliente || "Cliente",
-                endereco: payload.endereco || "Pelotas",
-                bairro: payload.bairro || "Pelotas",
-                itens: Array.isArray(payload.itens) ? payload.itens : [String(payload.itens || "1x Pedido Facity")],
-                pagamento: payload.pagamento || "Facity",
-                total: payload.total || "0,00"
-              };
-              const idx = myDeliveries.findIndex(d => String(d.ticket) === String(newDel.ticket));
-              if (idx >= 0) myDeliveries[idx] = newDel;
-              else myDeliveries.unshift(newDel);
-              saveMyDeliveries();
-              selectedTicket = newDel.ticket;
-              if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-              renderMotoboyAppUI(`🔔 NOVA ENTREGA RECEBIDA: COMANDA #${newDel.ticket}!`);
+            const resp = await fetch(`https://ntfy.sh/${topic}/json?poll=1&since=20m`, { cache: "no-store" });
+            if (!resp.ok) continue;
+            const text = await resp.text();
+            const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+            for (const line of lines) {
+              try {
+                const outer = JSON.parse(line);
+                if (outer && outer.event === "message" && outer.message) {
+                  const payload = JSON.parse(outer.message);
+                  if (payload.type === "DELIVERED") {
+                    const cleanTk = String(payload.ticket || "").replace(/^FAC-00/i, "").replace(/\D/g, "") || String(payload.ticket);
+                    finishedMotoTickets.add(cleanTk);
+                  } else if (payload.type === "DISPATCH") {
+                    handleMotoIncomingDispatch(payload);
+                  }
+                }
+              } catch (e) {}
             }
           } catch (err) {}
-        };
-      } catch (e) {}
+        }
+      }
 
-      // Envia silenciosamente a geolocalização em segundo plano para o mapa da loja (sem aviso na tela)
+      renderMotoboyAppUI();
+
+      // Escuta em tempo real pela nuvem (SSE + Polling + Local) novas comandas bipadas para este motoboy na loja
+      [NTFY_CMD_TOPIC, NTFY_TOPIC].forEach(topic => {
+        try {
+          const esMoto = new EventSource(`https://ntfy.sh/${topic}/sse`);
+          esMoto.onmessage = evt => {
+            try {
+              const outer = JSON.parse(evt.data);
+              if (!outer || !outer.message) return;
+              const payload = JSON.parse(outer.message);
+              handleMotoIncomingDispatch(payload);
+            } catch (err) {}
+          };
+        } catch (e) {}
+      });
+      pollMotoDeliveriesFromCloud();
+      setInterval(pollMotoDeliveriesFromCloud, 3500);
+
+      // Envia silenciosamente a geolocalização em segundo plano para o mapa da loja com THROTTLE de 15s (evita HTTP 429 no ntfy.sh)
+      let lastGpsSentAt = 0;
       if (navigator.geolocation) {
         navigator.geolocation.watchPosition(pos => {
+          const now = Date.now();
+          if (now - lastGpsSentAt < 15000) return;
+          lastGpsSentAt = now;
           const mbObj = getMyMotoObj();
           fetch(`https://ntfy.sh/${NTFY_TOPIC}`, {
             method: "POST",
@@ -2206,12 +2382,13 @@
               lng: pos.coords.longitude
             })
           }).catch(() => {});
-        }, () => {}, { enableHighAccuracy: true, maximumAge: 5000 });
+        }, () => {}, { enableHighAccuracy: true, maximumAge: 10000 });
       }
       return true;
     }
 
     window.addEventListener("DOMContentLoaded", () => {
+      loadActiveOrdersFromStorage();
       if (checkAndRenderMotoboyMobileScreen()) return;
       startLiveMotoboyCloudListener();
       populateModals();
@@ -2219,7 +2396,7 @@
       renderMotoboyFleet();
       setTimeout(() => {
         resizeCanvas();
-        selectOrderOnMap("FAC-0042");
+        if (orders[0]) selectOrderOnMap(orders[0].id);
       }, 60);
 
       // Atualiza suavemente a posição dos motoboys em rota ao longo das ruas reais de Pelotas
