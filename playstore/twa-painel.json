@@ -1,0 +1,16 @@
+{
+  "packageId": "br.com.iagolanches2.painel",
+  "host": "acheifacil25.github.io",
+  "name": "Iago Lanches 2 Painel",
+  "launcherName": "Iago Lanches 2",
+  "display": "standalone",
+  "themeColor": "#18181b",
+  "navigationColor": "#09090b",
+  "backgroundColor": "#09090b",
+  "enableNotifications": true,
+  "startUrl": "/iago-lanches-2-pelotas/index.html",
+  "iconUrl": "https://acheifacil25.github.io/iago-lanches-2-pelotas/icon-512.png",
+  "maskableIconUrl": "https://acheifacil25.github.io/iago-lanches-2-pelotas/icon-512.png",
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1
+}
