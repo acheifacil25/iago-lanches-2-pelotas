@@ -64,6 +64,9 @@
 
     <!-- AÇÕES RÁPIDAS DISCRETAS -->
     <div class="flex items-center gap-1.5">
+      <button onclick="openDailyClosingModal()" class="px-2.5 py-1 rounded-lg text-[10.5px] font-bold bg-[#181820] hover:bg-zinc-700 text-amber-300 border border-amber-500/40 cursor-pointer flex items-center gap-1 shadow-sm" title="Ver relatório de entregas de cada motoboy e fechar expediente">
+        📊 Fechamento do Dia
+      </button>
       <button onclick="openInstallAppModal()" class="px-2.5 py-1 rounded-lg text-[10.5px] font-bold bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700 cursor-pointer flex items-center gap-1" title="Instalar Aplicativo no Computador, Celular ou Play Store">
         📲 Aplicativos &amp; Play Store
       </button>
@@ -310,6 +313,65 @@
     </div>
   </div>
 
+    <!-- MODAL: FECHAMENTO DO DIA & RELATÓRIO DE ENTREGAS -->
+  <div id="daily-closing-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-[#121217] panel-border rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="p-4 bg-[#181820] border-b border-zinc-800 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <span class="text-xl">📊</span>
+          <div>
+            <h3 class="text-sm font-black uppercase text-white tracking-wide">Fechamento do Dia • Iago Lanches 2</h3>
+            <p id="daily-closing-subtitle" class="text-[11px] text-zinc-400">Relatório consolidado de entregas da noite</p>
+          </div>
+        </div>
+        <button onclick="closeDailyClosingModal()" class="w-7 h-7 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 flex items-center justify-center font-bold text-sm cursor-pointer">✕</button>
+      </div>
+
+      <div class="p-4 overflow-y-auto space-y-4">
+        <!-- CARDS DE TOTAIS GERAIS -->
+        <div class="grid grid-cols-3 gap-2.5">
+          <div class="p-3 rounded-xl bg-[#0d0d11] border border-zinc-800">
+            <div class="text-[10px] uppercase font-bold text-zinc-400">Entregas no Turno</div>
+            <div id="closing-total-deliveries" class="text-xl font-black text-white mt-0.5">0</div>
+          </div>
+          <div class="p-3 rounded-xl bg-[#0d0d11] border border-zinc-800">
+            <div class="text-[10px] uppercase font-bold text-zinc-400">Total Faturado</div>
+            <div id="closing-total-money" class="text-xl font-black text-emerald-400 mt-0.5">R$ 0,00</div>
+          </div>
+          <div class="p-3 rounded-xl bg-[#0d0d11] border border-zinc-800">
+            <div class="text-[10px] uppercase font-bold text-zinc-400">Motoboys na Escala</div>
+            <div id="closing-active-motoboys" class="text-xl font-black text-sky-400 mt-0.5">0/7</div>
+          </div>
+        </div>
+
+        <!-- TABELA DE ENTREGAS POR MOTOBOY -->
+        <div class="rounded-xl border border-zinc-800 bg-[#0d0d11] overflow-hidden">
+          <div class="px-3.5 py-2.5 bg-[#16161c] border-b border-zinc-800 text-[11px] font-bold uppercase text-zinc-300 flex justify-between">
+            <span>Entregador &amp; Status</span>
+            <span>Entregas • Comandas • Total</span>
+          </div>
+          <div class="divide-y divide-zinc-800/80" id="daily-closing-table-body">
+            <!-- Linhas geradas via JavaScript -->
+          </div>
+        </div>
+
+        <div class="p-3 rounded-xl bg-amber-950/30 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-2">
+          <span>💡</span>
+          <span>Ao clicar em <strong>Resetar Entregas do Dia</strong>, todos os contadores dos motoboys e o histórico de comandas voltam a zero para o próximo expediente.</span>
+        </div>
+      </div>
+
+      <div class="p-4 bg-[#16161c] border-t border-zinc-800 flex items-center justify-between gap-3">
+        <button onclick="closeDailyClosingModal()" class="px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs uppercase cursor-pointer">
+          Fechar
+        </button>
+        <button onclick="confirmResetDailyDeliveries()" class="px-4 py-2.5 rounded-xl bg-rose-700 hover:bg-rose-600 text-white font-black text-xs uppercase cursor-pointer flex items-center gap-1.5 shadow-lg">
+          🔄 Resetar Entregas do Dia
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL INSTALAR APLICATIVO & GOOGLE PLAY STORE -->
   <div id="install-app-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm hidden items-center justify-center p-4">
     <div class="bg-[#141418] border border-zinc-700 rounded-2xl max-w-3xl w-full overflow-hidden shadow-2xl">
@@ -473,19 +535,32 @@
     function getMotoboyLivePosition(m) {
       const activeOrders = orders.filter(o => o.motoboyId === m.id && o.status === "EM_ROTA");
 
-      // 1. PRIORIDADE MÁXIMA: GPS REAL DO CELULAR DO MOTOBOY
-      if (m.liveGps && m.liveGps.lat && m.liveGps.lng) {
+      // 1. PRIORIDADE MÁXIMA: GPS REAL DO CELULAR DO MOTOBOY COM FILTRO DE PELOTAS E STATUS RETORNO
+      if (m.liveGps && m.liveGps.lat && m.liveGps.lng && isValidPelotasCoords(m.liveGps.lat, m.liveGps.lng)) {
         const distFromStore = calcDistanceKm(STORE_BASE.lat, STORE_BASE.lng, m.liveGps.lat, m.liveGps.lng);
-        const isAtBase = distFromStore < 0.05; // Menos de 50m da loja
+        const isAtBase = distFromStore < 0.06; // Menos de 60m da loja = já chegou no balcão
         const currentStreet = findNearestStreetName(m.liveGps.lat, m.liveGps.lng);
         m.lat = m.liveGps.lat;
         m.lng = m.liveGps.lng;
-        m.status = isAtBase ? "DISPONIVEL_BALCAO" : "EM_ROTA";
+        const distMetros = Math.round(distFromStore * 1000);
+        const minutosVolta = Math.max(1, Math.round(distFromStore * 1.8));
+
+        if (activeOrders.length > 0) {
+          m.status = "EM_ROTA";
+        } else if (isAtBase) {
+          m.status = "DISPONIVEL_BALCAO";
+        } else {
+          m.status = "RETORNANDO_LOJA";
+        }
+
         return {
           lat: m.liveGps.lat,
           lng: m.liveGps.lng,
           isAtBase: isAtBase,
           isLiveGps: true,
+          distKm: distFromStore,
+          distMetros: distMetros,
+          minutosVolta: minutosVolta,
           streetName: currentStreet,
           activeOrder: activeOrders[0] || null,
           allOrders: activeOrders
@@ -1025,19 +1100,38 @@
         ctx.textBaseline = "middle";
         ctx.fillText("🏍", pos.x, pos.y + 0.5);
 
-        const ticketsStr = posInfo.allOrders && posInfo.allOrders.length > 0
-          ? ` (${posInfo.allOrders.map(x => `#${x.ticket}`).join(",")})`
-          : (posInfo.isLiveGps ? ` • ${posInfo.streetName.slice(0, 14)}` : "");
-        const motoLabel = `🏍 ${m.nome}${ticketsStr}`;
+        const isReturning = m.status === "RETORNANDO_LOJA";
+        if (isReturning) {
+          // Linha tracejada suave indicando trajeto de volta para a lancheria
+          ctx.beginPath();
+          ctx.setLineDash([4, 4]);
+          ctx.moveTo(pos.x, pos.y);
+          ctx.lineTo(basePos.x, basePos.y);
+          ctx.strokeStyle = `${m.cor}99`;
+          ctx.lineWidth = 1.6;
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        let statusText = "";
+        if (isReturning) {
+          const mTxt = posInfo.distMetros < 1000 ? `${posInfo.distMetros}m` : `${(posInfo.distMetros/1000).toFixed(1)}km`;
+          statusText = ` 🔄 Voltando (${mTxt} • ~${posInfo.minutosVolta}m)`;
+        } else if (posInfo.allOrders && posInfo.allOrders.length > 0) {
+          statusText = ` (${posInfo.allOrders.map(x => `#${x.ticket}`).join(",")})`;
+        } else if (posInfo.isLiveGps) {
+          statusText = ` • ${posInfo.streetName.slice(0, 12)}`;
+        }
+        const motoLabel = `🏍 ${m.nome}${statusText}`;
         ctx.font = "900 9px Roboto, sans-serif";
         ctx.textAlign = "left";
         const mw = ctx.measureText(motoLabel).width;
-        ctx.fillStyle = "rgba(9, 9, 11, 0.88)";
+        ctx.fillStyle = isReturning ? "rgba(24, 24, 34, 0.95)" : "rgba(9, 9, 11, 0.88)";
         ctx.fillRect(pos.x - mw / 2 - 4, pos.y - 25, mw + 8, 13);
         ctx.strokeStyle = m.cor;
         ctx.lineWidth = 1.3;
         ctx.strokeRect(pos.x - mw / 2 - 4, pos.y - 25, mw + 8, 13);
-        ctx.fillStyle = "#ffffff";
+        ctx.fillStyle = isReturning ? "#fef08a" : "#ffffff";
         ctx.fillText(motoLabel, pos.x - mw / 2, pos.y - 18);
       });
     }
@@ -1552,32 +1646,79 @@
       const bar = document.getElementById("motoboys-live-map-bar");
       if (!bar) return;
       const activeList = getActiveMotoboys();
-      bar.innerHTML = activeList.map(m => {
-        const posInfo = getMotoboyLivePosition(m);
-        if (posInfo.isAtBase) {
-          return `
-            <button onclick="focusMotoboyOnMap('${m.id}')"
-                    class="px-2 py-0.5 rounded-lg bg-[#181820] hover:bg-zinc-800 border border-zinc-700 text-[10px] font-medium text-zinc-300 flex items-center gap-1 cursor-pointer"
-                    title="Clique para ver ${m.nome} na Lancheria">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-              <span>🏍️ ${m.nome}: <strong class="text-zinc-200">Na Loja</strong></span>
+
+      const returning = [];
+      const onDelivery = [];
+      const atBase = [];
+
+      activeList.forEach(m => {
+        const pos = getMotoboyLivePosition(m);
+        if (m.status === "RETORNANDO_LOJA") {
+          returning.push({ m, pos });
+        } else if (pos.isAtBase || m.status === "DISPONIVEL_BALCAO") {
+          atBase.push({ m, pos });
+        } else {
+          onDelivery.push({ m, pos });
+        }
+      });
+
+      // ORDENA QUEM ESTÁ RETORNANDO PELA MENOR DISTÂNCIA (QUEM VAI CHEGAR PRIMEIRO NA LOJA)
+      returning.sort((a, b) => (a.pos.distMetros || 99999) - (b.pos.distMetros || 99999));
+
+      const medals = ["🥇", "🥈", "🥉"];
+      let html = "";
+
+      // 1. QUEM CHEGA PRIMEIRO NA LOJA (DESTAQUE MÁXIMO)
+      if (returning.length > 0) {
+        html += `<span class="text-[9.5px] font-black uppercase text-amber-300 bg-amber-950/80 px-2 py-0.5 rounded border border-amber-500/40">Chegam Primeiro:</span>`;
+        returning.forEach((item, idx) => {
+          const medal = medals[idx] || "🏍️";
+          const dTxt = item.pos.distMetros < 1000 ? `${item.pos.distMetros}m` : `${(item.pos.distMetros/1000).toFixed(1)}km`;
+          html += `
+            <button onclick="focusMotoboyOnMap('${item.m.id}')"
+                    style="border-color:${item.m.cor}"
+                    class="px-2 py-0.5 rounded-lg bg-[#181824] hover:bg-zinc-800 border text-[10px] font-bold text-white flex items-center gap-1 cursor-pointer shadow"
+                    title="${item.m.nome} está a ${dTxt} da loja (~${item.pos.minutosVolta} min)">
+              <span>${medal} ${item.m.nome}:</span>
+              <span class="text-amber-300 font-black">🔄 a ${dTxt} (~${item.pos.minutosVolta}m)</span>
             </button>
           `;
-        }
-        const labelText = posInfo.activeOrder
-          ? `#${posInfo.activeOrder.ticket} ${(posInfo.activeOrder.endereco || '').split(',')[0]}`
-          : (posInfo.isLiveGps ? `Ao Vivo: ${posInfo.streetName.slice(0, 16)}` : posInfo.streetName);
+        });
+      }
 
-        return `
-          <button onclick="focusMotoboyOnMap('${m.id}')"
-                  style="border-color:${m.cor}"
-                  class="px-2 py-0.5 rounded-lg bg-black/85 hover:bg-zinc-900 border text-[10px] font-bold text-white flex items-center gap-1 cursor-pointer shadow"
-                  title="Clique para localizar ${m.nome} no mapa (${posInfo.streetName})">
-            <span class="w-2 h-2 rounded-full animate-ping" style="background:${m.cor}"></span>
-            <span>🏍️ ${m.nome}: <strong style="color:${m.cor}">${labelText}</strong></span>
-          </button>
-        `;
-      }).join("");
+      // 2. EM ROTA DE ENTREGA
+      if (onDelivery.length > 0) {
+        onDelivery.forEach(item => {
+          const label = item.pos.activeOrder
+            ? `#${item.pos.activeOrder.ticket} ${(item.pos.activeOrder.endereco || '').split(',')[0].slice(0, 14)}`
+            : (item.pos.isLiveGps ? `${item.pos.streetName.slice(0, 14)}` : 'Em Rota');
+          html += `
+            <button onclick="focusMotoboyOnMap('${item.m.id}')"
+                    style="border-color:${item.m.cor}"
+                    class="px-2 py-0.5 rounded-lg bg-black/85 hover:bg-zinc-900 border text-[10px] font-bold text-white flex items-center gap-1 cursor-pointer shadow"
+                    title="Clique para localizar ${item.m.nome} (${item.pos.streetName})">
+              <span class="w-1.5 h-1.5 rounded-full animate-ping" style="background:${item.m.cor}"></span>
+              <span>🏍️ ${item.m.nome}: <strong style="color:${item.m.cor}">${label}</strong></span>
+            </button>
+          `;
+        });
+      }
+
+      // 3. NO BALCÃO (DISPONÍVEIS)
+      if (atBase.length > 0) {
+        atBase.forEach(item => {
+          html += `
+            <button onclick="focusMotoboyOnMap('${item.m.id}')"
+                    class="px-2 py-0.5 rounded-lg bg-[#181820] hover:bg-zinc-800 border border-zinc-700 text-[10px] font-medium text-zinc-300 flex items-center gap-1 cursor-pointer"
+                    title="${item.m.nome} está na lancheria">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+              <span>${item.m.nome}: <strong class="text-zinc-200">Na Loja</strong></span>
+            </button>
+          `;
+        });
+      }
+
+      bar.innerHTML = html;
     }
 
     function onChangeActiveMotoboy(motoboyId) {
@@ -1646,10 +1787,19 @@
       orders.splice(idx, 1);
       if (mId) {
         const mb = getMotoboyById(mId);
-        const stillHasOrders = orders.some(x => x.motoboyId === mId && x.status === "EM_ROTA");
-        if (mb && !stillHasOrders) {
-          mb.status = "DISPONIVEL_BALCAO";
-          mb.liveGps = null;
+        if (mb) {
+          mb.entregasHoje = (mb.entregasHoje || 0) + 1;
+          recordOrderInDailyClosing(o, mb);
+          const stillHasOrders = orders.some(x => x.motoboyId === mId && x.status === "EM_ROTA");
+          if (!stillHasOrders) {
+            // Mantém acompanhando a localização dele em tempo real no retorno à loja!
+            if (mb.liveGps && mb.liveGps.lat && mb.liveGps.lng && isValidPelotasCoords(mb.liveGps.lat, mb.liveGps.lng)) {
+              const distKm = calcDistanceKm(STORE_BASE.lat, STORE_BASE.lng, mb.liveGps.lat, mb.liveGps.lng);
+              mb.status = distKm < 0.06 ? "DISPONIVEL_BALCAO" : "RETORNANDO_LOJA";
+            } else {
+              mb.status = "RETORNANDO_LOJA";
+            }
+          }
         }
       }
       saveActiveOrdersToStorage();
@@ -2088,6 +2238,161 @@
       }
     }
 
+        // =========================================================================
+    // SISTEMA DE FECHAMENTO DO DIA & RELATÓRIO DE ENTREGAS
+    // =========================================================================
+    let dailyClosingData = {
+      date: new Date().toLocaleDateString("pt-BR"),
+      deliveredOrders: []
+    };
+    try {
+      const savedClosing = localStorage.getItem("iago_daily_closing_v2");
+      if (savedClosing) {
+        const parsed = JSON.parse(savedClosing);
+        if (parsed.date === new Date().toLocaleDateString("pt-BR")) {
+          dailyClosingData = parsed;
+        }
+      }
+    } catch (e) {}
+
+    function recordOrderInDailyClosing(order, mb) {
+      if (!order || !mb) return;
+      const cleanTk = String(order.ticket || "").replace(/^FAC-00/i, "").replace(/\D/g, "") || String(order.ticket);
+      const exists = dailyClosingData.deliveredOrders.some(x => String(x.ticket) === cleanTk);
+      if (!exists) {
+        dailyClosingData.deliveredOrders.push({
+          ticket: cleanTk,
+          orderId: order.id || `FAC-00${cleanTk}`,
+          motoboyId: mb.id,
+          motoboyNome: mb.nome,
+          cliente: order.cliente || "Cliente",
+          bairro: order.bairro || "Pelotas",
+          total: Number(order.total || 0),
+          hora: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+        });
+        try {
+          localStorage.setItem("iago_daily_closing_v2", JSON.stringify(dailyClosingData));
+        } catch (e) {}
+      }
+    }
+
+    function openDailyClosingModal() {
+      renderDailyClosingModal();
+      const m = document.getElementById("daily-closing-modal");
+      if (m) {
+        m.classList.remove("hidden");
+        m.classList.add("flex");
+      }
+    }
+
+    function closeDailyClosingModal() {
+      const m = document.getElementById("daily-closing-modal");
+      if (m) {
+        m.classList.add("hidden");
+        m.classList.remove("flex");
+      }
+    }
+
+    function renderDailyClosingModal() {
+      const activeList = getActiveMotoboys();
+      const tableBody = document.getElementById("daily-closing-table-body");
+      const totalDelivEl = document.getElementById("closing-total-deliveries");
+      const totalMoneyEl = document.getElementById("closing-total-money");
+      const activeMotoEl = document.getElementById("closing-active-motoboys");
+      const subTitleEl = document.getElementById("daily-closing-subtitle");
+
+      if (subTitleEl) {
+        subTitleEl.textContent = `Expediente de Hoje: ${dailyClosingData.date} • Iago Lanches 2`;
+      }
+
+      let grandTotalDeliveries = 0;
+      let grandTotalMoney = 0;
+
+      const rowsHtml = motoboys.map(m => {
+        const hisOrders = dailyClosingData.deliveredOrders.filter(o => o.motoboyId === m.id || o.motoboyNome.toLowerCase() === m.nome.toLowerCase());
+        const totalCount = Math.max(m.entregasHoje || 0, hisOrders.length);
+        const sumMoney = hisOrders.reduce((acc, cur) => acc + (cur.total || 0), 0);
+
+        grandTotalDeliveries += totalCount;
+        grandTotalMoney += sumMoney;
+
+        const posInfo = getMotoboyLivePosition(m);
+        let statusBadge = "";
+        if (m.status === "RETORNANDO_LOJA") {
+          statusBadge = `<span class="px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-500/40 text-[9.5px] font-black">🔄 Retornando (${posInfo.distMetros || 0}m)</span>`;
+        } else if (posInfo.isAtBase || m.status === "DISPONIVEL_BALCAO") {
+          statusBadge = `<span class="px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-500/40 text-[9.5px] font-black">🟢 Na Loja (Balcão)</span>`;
+        } else {
+          statusBadge = `<span class="px-2 py-0.5 rounded-full bg-sky-950 text-sky-300 border border-sky-500/40 text-[9.5px] font-black">🚀 Em Rota</span>`;
+        }
+
+        const ticketBadges = hisOrders.length > 0
+          ? hisOrders.map(o => `<span class="px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-200 border border-zinc-700 text-[10px] font-mono">#${o.ticket}</span>`).join(" ")
+          : `<span class="text-zinc-500 text-[10.5px]">Nenhuma comanda registrada</span>`;
+
+        return `
+          <div class="p-3 flex items-center justify-between gap-3 hover:bg-[#15151c] transition">
+            <div class="min-w-0">
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-white text-xs">🏍️ ${m.nome}</span>
+                <span class="text-[10px] text-zinc-400 font-mono">(F${m.tecla})</span>
+                ${statusBadge}
+              </div>
+              <div class="mt-1 flex items-center gap-1.5 flex-wrap">
+                <span class="text-[10px] text-zinc-400 font-bold">Comandas:</span>
+                ${ticketBadges}
+              </div>
+            </div>
+            <div class="text-right whitespace-nowrap">
+              <div class="text-xs font-black text-white">${totalCount} ${totalCount === 1 ? 'entrega' : 'entregas'}</div>
+              <div class="text-xs font-bold text-emerald-400 mt-0.5">R$ ${sumMoney.toFixed(2).replace('.', ',')}</div>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      if (tableBody) tableBody.innerHTML = rowsHtml;
+      if (totalDelivEl) totalDelivEl.textContent = grandTotalDeliveries;
+      if (totalMoneyEl) totalMoneyEl.textContent = `R$ ${grandTotalMoney.toFixed(2).replace('.', ',')}`;
+      if (activeMotoEl) activeMotoEl.textContent = `${activeList.length}/${motoboys.length}`;
+    }
+
+    async function confirmResetDailyDeliveries() {
+      const ok = confirm("⚠️ ATENÇÃO: Deseja encerrar o expediente e RESETAR as entregas do dia?\n\nIsso irá:\n1. Zerar a contagem de entregas de todos os motoboys.\n2. Limpar o histórico de comandas entregues.\n3. Sincronizar com os celulares dos motoboys para o próximo expediente.");
+      if (!ok) return;
+
+      // 1. Zera dados locais de fechamento
+      dailyClosingData.deliveredOrders = [];
+      try {
+        localStorage.setItem("iago_daily_closing_v2", JSON.stringify(dailyClosingData));
+      } catch (e) {}
+
+      // 2. Zera contadores dos motoboys
+      motoboys.forEach(m => {
+        m.entregasHoje = 0;
+      });
+
+      // 3. Limpa comandas entregues
+      deliveredTickets.clear();
+      try {
+        localStorage.setItem("iago_delivered_tickets", JSON.stringify([]));
+      } catch (e) {}
+
+      // 4. Publica na nuvem para zerar os apps mobile dos motoboys
+      await publishCloudCommand({
+        type: "RESET_DAY",
+        ts: Date.now()
+      });
+
+      renderMotoboyFleet();
+      renderOrdersQueue();
+      renderMotoboysLiveMapBar();
+      drawPelotasMap();
+      renderDailyClosingModal();
+
+      showToast("✅ Expediente encerrado com sucesso! Contadores zerados para o próximo dia.");
+    }
+
     function openInstallAppModal() {
       const m = document.getElementById("install-app-modal");
       if (m) {
@@ -2144,16 +2449,38 @@
       if (msgId && processedCloudIds.has(msgId)) return;
       if (msgId) processedCloudIds.add(msgId);
 
-      if (payload.type === "GPS" && payload.motoboyId && payload.lat && payload.lng) {
-        const mb = motoboys.find(m => m.id === payload.motoboyId);
+      if (payload.type === "GPS" && (payload.motoboyId || payload.nome) && payload.lat && payload.lng) {
+        const nLat = Number(payload.lat);
+        const nLng = Number(payload.lng);
+        if (!isValidPelotasCoords(nLat, nLng)) return;
+
+        const pId = String(payload.motoboyId || "").trim().toLowerCase();
+        const pNome = String(payload.nome || "").trim().toLowerCase();
+        const mb = motoboys.find(m =>
+          (pId && m.id.toLowerCase() === pId) ||
+          (pNome && m.nome.toLowerCase() === pNome)
+        );
+
         if (mb) {
           mb.liveGps = {
-            lat: Number(payload.lat),
-            lng: Number(payload.lng),
+            lat: nLat,
+            lng: nLng,
+            accuracy: payload.accuracy || 0,
             updatedAt: Date.now()
           };
-          mb.lat = Number(payload.lat);
-          mb.lng = Number(payload.lng);
+          mb.lat = nLat;
+          mb.lng = nLng;
+
+          const stillHasOrders = orders.some(x => x.motoboyId === mb.id && x.status === "EM_ROTA");
+          const distFromStore = calcDistanceKm(STORE_BASE.lat, STORE_BASE.lng, nLat, nLng);
+          if (stillHasOrders) {
+            mb.status = "EM_ROTA";
+          } else if (distFromStore < 0.06) {
+            mb.status = "DISPONIVEL_BALCAO";
+          } else {
+            mb.status = "RETORNANDO_LOJA";
+          }
+
           renderMotoboysLiveMapBar();
           drawPelotasMap();
         }
@@ -2161,7 +2488,7 @@
         const cleanTk = String(payload.ticket || "").replace(/^FAC-00/i, "").replace(/\D/g, "");
         const didComplete = completeDelivery(payload.orderId || cleanTk || payload.ticket, true);
         if (didComplete) {
-          showToast(`📲 Motoboy ${payload.nome || ''} deu baixa pelo Aplicativo: Comanda #${cleanTk || payload.ticket} ENTREGUE!`);
+          showToast(`📲 Motoboy ${payload.nome || ''} deu baixa no Aplicativo: Comanda #${cleanTk || payload.ticket} ENTREGUE!`);
         }
       }
     }
@@ -2225,12 +2552,17 @@
       const params = new URLSearchParams(window.location.search);
       const isAppMode = params.get("app") === "motoboy";
       const urlMotoId = params.get("motoboy");
-      if (!isAppMode && !urlMotoId) return false;
+      const urlNome = params.get("nome");
+      if (!isAppMode && !urlMotoId && !urlNome) return false;
 
       const manifestLink = document.getElementById("app-manifest-link");
       if (manifestLink) manifestLink.setAttribute("href", "manifest-motoboy.json");
 
       let myMotoId = urlMotoId || localStorage.getItem("iago_my_motoboy_id") || "MOTO-02";
+      if (urlNome) {
+        const matched = motoboys.find(m => m.nome.toLowerCase() === urlNome.toLowerCase());
+        if (matched) myMotoId = matched.id;
+      }
       localStorage.setItem("iago_my_motoboy_id", myMotoId);
 
       function getMyMotoObj() {
@@ -2242,40 +2574,64 @@
         myDeliveries = JSON.parse(localStorage.getItem("iago_moto_deliveries_" + myMotoId) || "[]");
       } catch (e) { myDeliveries = []; }
 
-      let finishedMotoTickets = new Set();
-      try {
-        const savedFin = JSON.parse(localStorage.getItem("iago_moto_finished_tickets") || "[]");
-        savedFin.forEach(t => finishedMotoTickets.add(String(t)));
-      } catch (e) {}
-
       function saveMyDeliveries() {
         try {
           localStorage.setItem("iago_moto_deliveries_" + myMotoId, JSON.stringify(myDeliveries));
         } catch (e) {}
       }
 
+      let finishedMotoTickets = new Set();
+      try {
+        const savedFin = JSON.parse(localStorage.getItem("iago_moto_finished_tickets") || "[]");
+        savedFin.forEach(t => finishedMotoTickets.add(String(t)));
+      } catch (e) {}
+
+      // Se veio pedido direto pelos parâmetros da URL, adiciona imediatamente
       const urlTicket = params.get("ticket");
-      if (urlTicket && !finishedMotoTickets.has(String(urlTicket))) {
-        const orderId = params.get("orderId") || `FAC-00${urlTicket}`;
-        const cliente = params.get("cliente") || "Cliente";
-        const endereco = params.get("endereco") || "Pelotas";
+      if (urlTicket) {
+        const cleanTk = String(urlTicket).replace(/^FAC-00/i, "").replace(/\D/g, "") || String(urlTicket);
+        const orderId = params.get("orderId") || `FAC-00${cleanTk}`;
+        const cliente = params.get("cliente") || "Cliente Facity";
+        const endereco = params.get("endereco") || "Pelotas - RS";
         const bairro = params.get("bairro") || "Pelotas";
         const total = params.get("total") || "0,00";
         const pagamento = params.get("pagamento") || "Facity";
-        let itensRaw = params.get("itens") || "";
+        let itensRaw = params.get("itens");
         if (!itensRaw) {
-          const localOrd = orders.find(o => o.id === orderId || String(o.ticket) === String(urlTicket));
+          const localOrd = orders.find(o => o.id === orderId || String(o.ticket) === String(cleanTk));
           if (localOrd && Array.isArray(localOrd.itens)) itensRaw = localOrd.itens.join(" | ");
         }
         const itensList = (itensRaw || "1x Pedido Facity").split("|").map(s => s.trim()).filter(Boolean);
-        const existingIdx = myDeliveries.findIndex(d => String(d.ticket) === String(urlTicket));
-        const delObj = { orderId, ticket: String(urlTicket), cliente, endereco, bairro, total, pagamento, itens: itensList };
+        const existingIdx = myDeliveries.findIndex(d => String(d.ticket) === String(cleanTk));
+        const delObj = { orderId, ticket: String(cleanTk), cliente, endereco, bairro, total, pagamento, itens: itensList };
         if (existingIdx >= 0) myDeliveries[existingIdx] = delObj;
         else myDeliveries.unshift(delObj);
         saveMyDeliveries();
       }
 
+      // Carrega pedidos já despachados para este motoboy na fila da loja
+      orders.forEach(o => {
+        const mb = getMyMotoObj();
+        if (o.status === "EM_ROTA" && (o.motoboyId === myMotoId || (o.motoboyNome && o.motoboyNome.toLowerCase() === mb.nome.toLowerCase()))) {
+          const cleanTk = String(o.ticket).replace(/^FAC-00/i, "").replace(/\D/g, "") || String(o.ticket);
+          if (!finishedMotoTickets.has(cleanTk) && !myDeliveries.some(d => String(d.ticket) === cleanTk)) {
+            myDeliveries.push({
+              orderId: o.id,
+              ticket: cleanTk,
+              cliente: o.cliente || "Cliente",
+              endereco: o.endereco || "Pelotas",
+              bairro: o.bairro || "Pelotas",
+              itens: Array.isArray(o.itens) ? o.itens : [String(o.itens || "1x Pedido Facity")],
+              pagamento: o.pagamento || "Facity",
+              total: Number(o.total || 0).toFixed(2).replace(".", ",")
+            });
+          }
+        }
+      });
+      saveMyDeliveries();
+
       let selectedTicket = urlTicket || (myDeliveries[0] ? myDeliveries[0].ticket : null);
+      let gpsStatusText = "🛰️ Satélite GPS: Conectando...";
 
       window.onSelectMotoboyProfile = function(newMotoId) {
         myMotoId = newMotoId;
@@ -2333,7 +2689,8 @@
         myDeliveries = myDeliveries.filter(d => String(d.ticket) !== String(ticketToFinish) && String(d.ticket) !== String(cleanTk));
         saveMyDeliveries();
         selectedTicket = myDeliveries[0] ? myDeliveries[0].ticket : null;
-        renderMotoboyAppUI("✅ ENTREGA #" + cleanTk + " CONCLUÍDA NA LOJA!");
+        renderMotoboyAppUI("✅ ENTREGA #" + cleanTk + " CONCLUÍDA! VOCÊ ESTÁ RETORNANDO À LOJA.");
+        triggerImmediateGpsSend();
       };
 
       function renderMotoboyAppUI(flashBanner = "") {
@@ -2346,10 +2703,14 @@
           contentHtml = `
             <div class="p-6 rounded-2xl bg-[#14141d] border border-zinc-800 text-center space-y-2 my-4">
               <div class="text-3xl">🏍️</div>
-              <div class="text-sm font-bold uppercase text-zinc-200">Nenhuma entrega no momento</div>
+              <div class="text-sm font-bold uppercase text-zinc-200">Aguardando Próxima Entrega</div>
               <p class="text-xs text-zinc-400 leading-relaxed">
-                Você está conectado como <strong>${mbObj.nome}</strong>. Sua localização está ativa e novas entregas aparecem automaticamente aqui.
+                Conectado como <strong>${mbObj.nome}</strong>. Sua localização está ativa na loja.<br/>
+                Quando o caixa despachar uma comanda para você, ela <strong>aparecerá imediatamente aqui</strong>.
               </p>
+              <div class="mt-3 p-2.5 rounded-xl bg-[#09090b] border border-zinc-800 text-[11px] text-zinc-300 font-mono">
+                ${gpsStatusText}
+              </div>
             </div>
           `;
         } else {
@@ -2401,6 +2762,10 @@
                   <div class="text-base font-black text-emerald-400">R$ ${cur.total}</div>
                 </div>
               </div>
+            </div>
+
+            <div class="text-[10.5px] text-zinc-400 text-center font-mono">
+              ${gpsStatusText}
             </div>
 
             <a href="${gmapsUrl}" target="_blank"
@@ -2458,9 +2823,43 @@
       }
 
       function handleMotoIncomingDispatch(payload) {
-        if (!payload || payload.type !== "DISPATCH" || payload.motoboyId !== myMotoId) return;
+        if (!payload) return;
+
+        // Se o operador resetou o expediente do dia
+        if (payload.type === "RESET_DAY") {
+          finishedMotoTickets.clear();
+          myDeliveries = [];
+          try {
+            localStorage.setItem("iago_moto_finished_tickets", JSON.stringify([]));
+            localStorage.setItem("iago_moto_deliveries_" + myMotoId, JSON.stringify([]));
+          } catch (e) {}
+          selectedTicket = null;
+          renderMotoboyAppUI("🔄 Expediente resetado pela loja. Pronto para novos pedidos!");
+          return;
+        }
+
+        if (payload.type !== "DISPATCH") return;
+
+        // Casamento flexível por ID ("MOTO-02", "2") ou por NOME ("Adrian")
+        const mbObj = getMyMotoObj();
+        const pId = String(payload.motoboyId || "").trim().toLowerCase();
+        const cId = String(myMotoId || "").trim().toLowerCase();
+        const pNome = String(payload.nome || "").trim().toLowerCase();
+        const cNome = String(mbObj.nome || "").trim().toLowerCase();
+
+        const isMatch = (pId && cId && (pId === cId || pId.replace(/\D/g, "") === cId.replace(/\D/g, ""))) ||
+                        (pNome && cNome && (pNome === cNome || pNome.includes(cNome) || cNome.includes(pNome)));
+
+        if (!isMatch) return;
+
         const cleanTk = String(payload.ticket || "").replace(/^FAC-00/i, "").replace(/\D/g, "") || String(payload.ticket);
-        if (finishedMotoTickets.has(cleanTk)) return;
+
+        // Se o operador despachou agora, DESBLOQUEIA a comanda mesmo que tenha sido concluída em teste anterior!
+        finishedMotoTickets.delete(cleanTk);
+        try {
+          localStorage.setItem("iago_moto_finished_tickets", JSON.stringify(Array.from(finishedMotoTickets)));
+        } catch (e) {}
+
         const newDel = {
           orderId: payload.orderId || `FAC-00${cleanTk}`,
           ticket: String(cleanTk),
@@ -2471,22 +2870,23 @@
           pagamento: payload.pagamento || "Facity",
           total: payload.total || "0,00"
         };
+
         const idx = myDeliveries.findIndex(d => String(d.ticket) === String(newDel.ticket));
         const isNew = idx === -1;
         if (idx >= 0) myDeliveries[idx] = newDel;
         else myDeliveries.unshift(newDel);
         saveMyDeliveries();
-        if (isNew) {
-          selectedTicket = newDel.ticket;
-          if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-          renderMotoboyAppUI(`🔔 NOVA ENTREGA RECEBIDA: COMANDA #${newDel.ticket}!`);
-        }
+
+        selectedTicket = newDel.ticket;
+        if (navigator.vibrate) navigator.vibrate([250, 100, 250, 100, 300]);
+        renderMotoboyAppUI(`🔔 NOVA ENTREGA RECEBIDA: COMANDA #${newDel.ticket}!`);
       }
 
       async function pollMotoDeliveriesFromCloud() {
         for (const topic of [NTFY_CMD_TOPIC, NTFY_TOPIC]) {
           try {
-            const resp = await fetch(`https://ntfy.sh/${topic}/json?poll=1&since=20m`, { cache: "no-store" });
+            // Consulta sem poll=1 para não travar a requisição HTTP!
+            const resp = await fetch(`https://ntfy.sh/${topic}/json?since=1h`, { cache: "no-store" });
             if (!resp.ok) continue;
             const text = await resp.text();
             const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
@@ -2495,10 +2895,7 @@
                 const outer = JSON.parse(line);
                 if (outer && outer.event === "message" && outer.message) {
                   const payload = JSON.parse(outer.message);
-                  if (payload.type === "DELIVERED") {
-                    const cleanTk = String(payload.ticket || "").replace(/^FAC-00/i, "").replace(/\D/g, "") || String(payload.ticket);
-                    finishedMotoTickets.add(cleanTk);
-                  } else if (payload.type === "DISPATCH") {
+                  if (payload.type === "DISPATCH" || payload.type === "RESET_DAY") {
                     handleMotoIncomingDispatch(payload);
                   }
                 }
@@ -2510,7 +2907,20 @@
 
       renderMotoboyAppUI();
 
-      // Escuta entregas na nuvem
+      // Escuta entregas na nuvem via SSE e canais locais
+      if (localSyncChannel) {
+        localSyncChannel.onmessage = e => {
+          if (e && e.data) handleMotoIncomingDispatch(e.data);
+        };
+      }
+      window.addEventListener("storage", e => {
+        if (e.key === "iago_last_cloud_cmd" && e.newValue) {
+          try {
+            handleMotoIncomingDispatch(JSON.parse(e.newValue));
+          } catch (err) {}
+        }
+      });
+
       [NTFY_CMD_TOPIC, NTFY_TOPIC].forEach(topic => {
         try {
           const esMoto = new EventSource(`https://ntfy.sh/${topic}/sse`);
@@ -2525,15 +2935,22 @@
         } catch (e) {}
       });
       pollMotoDeliveriesFromCloud();
-      setInterval(pollMotoDeliveriesFromCloud, 3500);
+      setInterval(pollMotoDeliveriesFromCloud, 3000);
 
-      // Envia a geolocalização ao vivo (silencioso e em tempo real)
+      // Envia a geolocalização ao vivo (SATÉLITE REAL DE ALTA PRECISÃO)
       let lastCoords = null;
       let lastGpsSentAt = 0;
 
-      async function sendLiveGpsPayload(lat, lng) {
-        lastCoords = { lat, lng };
+      async function sendLiveGpsPayload(lat, lng, accuracy = 0) {
+        if (!isValidPelotasCoords(lat, lng)) {
+          gpsStatusText = `⚠️ Sinal GPS fora de Pelotas (${lat.toFixed(4)}, ${lng.toFixed(4)}). Ative o GPS de Alta Precisão!`;
+          return;
+        }
+
+        lastCoords = { lat, lng, accuracy };
         lastGpsSentAt = Date.now();
+        gpsStatusText = `🛰️ Satélite GPS Conectado: ±${accuracy}m • Pelotas/RS`;
+
         const mbObj = getMyMotoObj();
         const gpsBody = JSON.stringify({
           type: "GPS",
@@ -2542,8 +2959,13 @@
           ticket: selectedTicket || "00",
           lat: Number(lat),
           lng: Number(lng),
+          accuracy: Number(accuracy),
           ts: Date.now()
         });
+
+        if (localSyncChannel) {
+          try { localSyncChannel.postMessage(JSON.parse(gpsBody)); } catch(e){}
+        }
 
         for (const t of [NTFY_GPS_TOPIC, NTFY_TOPIC]) {
           fetch(`https://ntfy.sh/${t}`, {
@@ -2557,8 +2979,8 @@
       function triggerImmediateGpsSend() {
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(pos => {
-            sendLiveGpsPayload(pos.coords.latitude, pos.coords.longitude);
-          }, () => {}, { enableHighAccuracy: true, timeout: 6000 });
+            sendLiveGpsPayload(pos.coords.latitude, pos.coords.longitude, Math.round(pos.coords.accuracy || 0));
+          }, () => {}, { enableHighAccuracy: true, maximumAge: 0, timeout: 8000 });
         }
       }
 
@@ -2567,20 +2989,22 @@
       if (navigator.geolocation) {
         navigator.geolocation.watchPosition(pos => {
           const now = Date.now();
-          if (now - lastGpsSentAt >= 4000) {
-            sendLiveGpsPayload(pos.coords.latitude, pos.coords.longitude);
+          if (now - lastGpsSentAt >= 3500) {
+            sendLiveGpsPayload(pos.coords.latitude, pos.coords.longitude, Math.round(pos.coords.accuracy || 0));
           }
-        }, () => {}, { enableHighAccuracy: true, maximumAge: 3000 });
+        }, err => {
+          gpsStatusText = `⚠️ GPS: Permissão ou sinal indisponível (${err.message || 'Ative a localização'})`;
+        }, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 });
       }
 
-      // Heartbeat a cada 7 segundos para manter o entregador ativo no mapa mesmo parado
+      // Heartbeat a cada 5 segundos para manter o entregador ativo no mapa
       setInterval(() => {
         if (lastCoords) {
-          sendLiveGpsPayload(lastCoords.lat, lastCoords.lng);
+          sendLiveGpsPayload(lastCoords.lat, lastCoords.lng, lastCoords.accuracy);
         } else {
           triggerImmediateGpsSend();
         }
-      }, 7000);
+      }, 5000);
 
       return true;
     }
