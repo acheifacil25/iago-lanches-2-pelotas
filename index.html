@@ -85,35 +85,15 @@
   <!-- MAIN GRID: MAPA CENTRAL AMPLIADO -->
   <main class="flex-1 grid grid-cols-1 lg:grid-cols-[275px_1fr_280px] gap-2 p-2 max-w-[1920px] w-full mx-auto">
 
-    <!-- COLUNA 1 (Canto Superior Esquerdo): FILA DE PEDIDOS COM OS BOTÕES DE TEMPO SELECIONÁVEIS -->
+    <!-- COLUNA 1: FILA DE PEDIDOS FACITY -->
     <section class="flex flex-col bg-[#131317] rounded-2xl panel-border overflow-hidden shadow-xl h-[92vh]">
       <div class="p-2.5 bg-[#16161b] border-b border-zinc-800 flex items-center justify-between">
         <div>
           <h2 class="text-xs font-bold uppercase tracking-wider text-zinc-200">
             📋 Fila de Entregas Facity
           </h2>
-          <p class="text-[10px] text-zinc-400">Clique no tempo abaixo para filtrar pedidos</p>
         </div>
-        <span id="active-filter-badge" class="text-[10px] font-bold px-2 py-0.5 rounded bg-zinc-800 text-zinc-300">Todos</span>
-      </div>
-
-      <!-- BOTÕES DE TEMPO SELECIONÁVEIS NO CANTO SUPERIOR ESQUERDO (FUNCIONAIS E CLICÁVEIS) -->
-      <div class="grid grid-cols-5 gap-1 px-2 py-1.5 bg-[#0e0e12] border-b border-zinc-800 text-[9.5px] font-bold text-center">
-        <button onclick="setWaitFilter('ALL')" id="filter-btn-ALL" class="py-1 px-1 rounded-lg bg-zinc-200 text-black font-black cursor-pointer transition">
-          Todos (<span id="count-all">0</span>)
-        </button>
-        <button onclick="setWaitFilter('VERDE')" id="filter-btn-VERDE" class="py-1 px-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-700 flex items-center justify-center gap-0.5 cursor-pointer transition">
-          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>&lt;15m (<span id="count-green">0</span>)
-        </button>
-        <button onclick="setWaitFilter('LARANJA_15')" id="filter-btn-LARANJA_15" class="py-1 px-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-700 flex items-center justify-center gap-0.5 cursor-pointer transition">
-          <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>&gt;15m (<span id="count-orange15">0</span>)
-        </button>
-        <button onclick="setWaitFilter('LARANJA_30')" id="filter-btn-LARANJA_30" class="py-1 px-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-700 flex items-center justify-center gap-0.5 cursor-pointer transition">
-          <span class="w-1.5 h-1.5 rounded-full bg-orange-500"></span>&gt;30m (<span id="count-orange30">0</span>)
-        </button>
-        <button onclick="setWaitFilter('VERMELHO_45')" id="filter-btn-VERMELHO_45" class="py-1 px-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-700 flex items-center justify-center gap-0.5 cursor-pointer transition">
-          <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping"></span>&gt;45m (<span id="count-red45">0</span>)
-        </button>
+        <span id="orders-total-badge" class="text-[10px] font-bold px-2 py-0.5 rounded bg-zinc-800 text-zinc-300">0 pedidos</span>
       </div>
 
       <div id="orders-queue-list" class="flex-1 overflow-y-auto p-2 space-y-2"></div>
@@ -219,9 +199,6 @@
 
           <!-- GRADE DOS MOTOBOYS PARA DESPACHAR COM 1 CLIQUE -->
           <div class="mt-2.5 pt-2 border-t border-zinc-800/80">
-            <div class="text-[9.5px] font-bold uppercase text-zinc-400 mb-1.5">
-              Clique no Motoboy p/ enviar a comanda <span id="typed-ticket-preview" class="text-white font-black">selecionada</span>:
-            </div>
             <div id="quick-motoboy-dispatch-grid" class="grid grid-cols-4 gap-1"></div>
           </div>
         </div>
@@ -235,8 +212,7 @@
           <div id="quick-beep-buttons" class="space-y-1.5 max-h-40 overflow-y-auto pr-0.5"></div>
         </div>
 
-        <!-- PREVIEW DO WHATSAPP ENVIADO AO MOTOBOY -->
-        <div id="whatsapp-dispatch-preview-box" class="bg-[#0e0e12] p-3 rounded-xl border border-zinc-800"></div>
+<!-- (Preview de transmissao externa removido - despacho direto em nuvem) -->
 
       </div>
     </section>
@@ -856,8 +832,8 @@
       img.failed = false;
 
       const sub = Math.abs(x + y) % 4;
-      // URL canônica de altíssima velocidade servida via CDN Edge do Google Maps (< 30ms)
-      const primaryUrl = `https://mt${sub}.google.com/vt/lyrs=${lyrs}&x=${x}&y=${y}&z=${z}&hl=pt-BR&gl=br`;
+      // URL Google Maps CDN Edge sem pontos de referência comerciais (Treichel, Jouglard, lojas, containers desligados)
+      const primaryUrl = `https://mt${sub}.google.com/vt/lyrs=${lyrs}&x=${x}&y=${y}&z=${z}&hl=pt-BR&gl=br&apistyle=s.t:2|p.v:off,s.t:4|p.v:off`;
 
       img.onload = () => {
         img.loaded = true;
@@ -1339,11 +1315,13 @@
     function onTicketInputChange(val) {
       const clean = (val || "").trim().replace("#", "");
       const lbl = document.getElementById("typed-ticket-preview");
-      if (clean) {
-        lbl.textContent = `#${clean}`;
-      } else {
-        const cur = orders.find(o => o.id === selectedOrderId);
-        lbl.textContent = cur ? `#${cur.ticket}` : "selecionada";
+      if (lbl) {
+        if (clean) {
+          lbl.textContent = `#${clean}`;
+        } else {
+          const cur = orders.find(o => o.id === selectedOrderId);
+          lbl.textContent = cur ? `#${cur.ticket}` : "selecionada";
+        }
       }
     }
 
@@ -1594,19 +1572,10 @@
     }
 
     function updateSemaphoreCounters() {
-      let cGreen = 0, cO15 = 0, cO30 = 0, cRed = 0;
-      orders.forEach(o => {
-        const sem = getWaitSemaphore(o.waitMinutes);
-        if (sem.code === "VERDE") cGreen++;
-        else if (sem.code === "LARANJA_15") cO15++;
-        else if (sem.code === "LARANJA_30") cO30++;
-        else cRed++;
-      });
-      document.getElementById("count-all").textContent = orders.length;
-      document.getElementById("count-green").textContent = cGreen;
-      document.getElementById("count-orange15").textContent = cO15;
-      document.getElementById("count-orange30").textContent = cO30;
-      document.getElementById("count-red45").textContent = cRed;
+      const badge = document.getElementById("orders-total-badge");
+      if (badge) badge.textContent = `${orders.length} pedidos`;
+      const elAll = document.getElementById("count-all");
+      if (elAll) elAll.textContent = orders.length;
     }
 
     function renderOrdersQueue() {
