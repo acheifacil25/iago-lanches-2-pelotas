@@ -34,3 +34,11 @@ def test_f_keys_and_login_contracts():
 
     # 5. Logo MTB presente
     assert 'alt="MTB Logo"' in content
+
+    # 6. Optimistic UI na conclusao da entrega (sem travar em loading)
+    assert 'window.finishMotoboyDeliveryNow = function(ticketToFinish)' in content
+    assert 'renderMotoboyAppUI(' in content
+    assert 'Promise.allSettled(promises)' in content
+    assert 'AbortController()' in content
+    assert 'payload.type === "DELIVERED"' in content
+

@@ -2440,19 +2440,22 @@
         localStorage.setItem("iago_last_cloud_cmd", jsonStr);
       } catch (e) {}
 
-      for (const topic of [NTFY_CMD_TOPIC, NTFY_TOPIC]) {
-        for (let attempt = 0; attempt < 2; attempt++) {
-          try {
-            const r = await fetch(`https://ntfy.sh/${topic}`, {
-              method: "POST",
-              headers: { "Content-Type": "text/plain;charset=UTF-8", "Cache-Control": "no-cache" },
-              body: jsonStr
-            });
-            if (r.ok) break;
-          } catch (err) {}
-          await new Promise(res => setTimeout(res, 350));
-        }
-      }
+      // Publicação concorrente não-bloqueante com timeout estrito de 1800ms
+      const topics = [NTFY_CMD_TOPIC, NTFY_TOPIC];
+      const promises = topics.map(async topic => {
+        try {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 1800);
+          await fetch(`https://ntfy.sh/${topic}`, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=UTF-8", "Cache-Control": "no-cache" },
+            body: jsonStr,
+            signal: controller.signal
+          }).finally(() => clearTimeout(timer));
+        } catch (err) {}
+      });
+
+      await Promise.allSettled(promises);
     }
 
         // =========================================================================
@@ -3238,38 +3241,39 @@
           }
         };
 
-        // BOTÃO REDONDO "✓" JÁ ENTREGUEI (DAR BAIXA)
-        window.finishMotoboyDeliveryNow = async function(ticketToFinish) {
+        // BOTÃO REDONDO "✓" JÁ ENTREGUEI (DAR BAIXA IMEDIATA OPTIMISTIC UI)
+        window.finishMotoboyDeliveryNow = function(ticketToFinish) {
           const cur = myDeliveries.find(d => String(d.ticket) === String(ticketToFinish)) || {
             orderId: `FAC-00${ticketToFinish}`,
             ticket: String(ticketToFinish)
           };
-          const btn = document.getElementById("btn-finish-delivery");
-          if (btn) {
-            btn.innerHTML = `<span class="animate-spin text-xl">⏳</span>`;
-            btn.disabled = true;
-          }
           const cleanTk = String(cur.ticket).replace(/^FAC-00/i, "").replace(/\D/g, "") || String(cur.ticket);
+
+          // 1. Marca imediatamente como entregue no estado local (0ms delay)
           finishedMotoTickets.add(String(cleanTk));
           try {
             localStorage.setItem("iago_moto_finished_tickets", JSON.stringify(Array.from(finishedMotoTickets)));
           } catch (e) {}
 
-          await publishCloudCommand({
+          myDeliveries = myDeliveries.filter(d => String(d.ticket) !== String(ticketToFinish) && String(d.ticket) !== String(cleanTk));
+          saveMyDeliveries();
+          selectedTicket = myDeliveries[0] ? myDeliveries[0].ticket : null;
+
+          if (navigator.vibrate) navigator.vibrate([150, 100, 150]);
+
+          // 2. Renderiza a tela IMEDIATAMENTE (sem travar em spinner de carregamento)
+          renderMotoboyAppUI(`✅ ENTREGA #${cleanTk} CONCLUÍDA! ${myDeliveries.length > 0 ? "Próxima comanda pronta." : "Você está retornando à loja."}`);
+          triggerImmediateGpsSend();
+
+          // 3. Transmite baixa à loja e retaguarda em segundo plano
+          publishCloudCommand({
             type: "DELIVERED",
             orderId: cur.orderId || `FAC-00${cleanTk}`,
             ticket: String(cleanTk),
             motoboyId: myMotoId,
             nome: mbObj.nome,
             ts: Date.now()
-          });
-
-          myDeliveries = myDeliveries.filter(d => String(d.ticket) !== String(ticketToFinish) && String(d.ticket) !== String(cleanTk));
-          saveMyDeliveries();
-          selectedTicket = myDeliveries[0] ? myDeliveries[0].ticket : null;
-          if (navigator.vibrate) navigator.vibrate([150, 100, 150]);
-          renderMotoboyAppUI("✅ ENTREGA #" + cleanTk + " CONCLUÍDA! VOCÊ ESTÁ RETORNANDO À LOJA.");
-          triggerImmediateGpsSend();
+          }).catch(() => {});
         };
 
         // CONTROLES DO MAPA DO MOTOBOY
@@ -3724,6 +3728,21 @@
             return;
           }
 
+          if (payload.type === "DELIVERED") {
+            const cleanTk = String(payload.ticket || "").replace(/^FAC-00/i, "").replace(/\D/g, "") || String(payload.ticket);
+            finishedMotoTickets.add(cleanTk);
+            try {
+              localStorage.setItem("iago_moto_finished_tickets", JSON.stringify(Array.from(finishedMotoTickets)));
+            } catch (e) {}
+            myDeliveries = myDeliveries.filter(d => String(d.ticket) !== cleanTk);
+            saveMyDeliveries();
+            if (String(selectedTicket) === cleanTk) {
+              selectedTicket = myDeliveries[0] ? myDeliveries[0].ticket : null;
+              renderMotoboyAppUI();
+            }
+            return;
+          }
+
           if (payload.type !== "DISPATCH") return;
 
           const pId = String(payload.motoboyId || "").trim().toLowerCase();
@@ -3738,7 +3757,8 @@
 
           const cleanTk = String(payload.ticket || "").replace(/^FAC-00/i, "").replace(/\D/g, "") || String(payload.ticket);
 
-          finishedMotoTickets.delete(cleanTk);
+          // Se já foi finalizado nesta sessão, não ressuscita a entrega pelo histórico de 1h do ntfy
+          if (finishedMotoTickets.has(cleanTk)) return;
           try {
             localStorage.setItem("iago_moto_finished_tickets", JSON.stringify(Array.from(finishedMotoTickets)));
           } catch (e) {}
@@ -3769,7 +3789,10 @@
         async function pollMotoDeliveriesFromCloud() {
           for (const topic of [NTFY_CMD_TOPIC, NTFY_TOPIC]) {
             try {
-              const resp = await fetch(`https://ntfy.sh/${topic}/json?since=1h`, { cache: "no-store" });
+              const pollController = new AbortController();
+              const pollTimer = setTimeout(() => pollController.abort(), 3500);
+              const resp = await fetch(`https://ntfy.sh/${topic}/json?since=1h`, { cache: "no-store", signal: pollController.signal })
+                .finally(() => clearTimeout(pollTimer));
               if (!resp.ok) continue;
               const text = await resp.text();
               const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
@@ -3778,7 +3801,7 @@
                   const outer = JSON.parse(line);
                   if (outer && outer.event === "message" && outer.message) {
                     const payload = JSON.parse(outer.message);
-                    if (payload.type === "DISPATCH" || payload.type === "RESET_DAY") {
+                    if (payload.type === "DISPATCH" || payload.type === "RESET_DAY" || payload.type === "DELIVERED") {
                       handleMotoIncomingDispatch(payload);
                     }
                   }
