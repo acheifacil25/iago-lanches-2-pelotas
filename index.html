@@ -1332,14 +1332,14 @@
     let lastKeyTime = 0;
 
     window.addEventListener("keydown", e => {
-      if (e.key >= "F1" && e.key <= "F12") {
+      const fMatch = (e.key || "").match(/^F([1-9]|1[0-2])$/i);
+      if (fMatch) {
         e.preventDefault();
-        const num = parseInt(e.key.replace("F", ""), 10);
+        const num = parseInt(fMatch[1], 10);
         const activeList = getActiveMotoboys();
         const mb = activeList.find(m => String(m.tecla) === String(num)) || activeList[num - 1] || motoboys[num - 1];
         if (mb) {
           onChangeActiveMotoboy(mb.id);
-          showToast(`🏍️ Motoboy ${mb.nome} selecionado! Digite o número da comanda e aperte Enter.`);
         }
         return;
       }
@@ -1853,6 +1853,12 @@
       renderOrdersQueue();
       renderMotoboyFleet();
       drawPelotasMap();
+      const mb = getMotoboyById(motoboyId);
+      if (mb) {
+        showToast(`🏍️ Motoboy ${mb.nome} selecionado! Digite a comanda e aperte Enter.`);
+      }
+      const inp = document.getElementById("barcode-manual-input");
+      if (inp) inp.focus();
     }
 
     function selectOrderOnMap(orderId) {
@@ -2982,19 +2988,64 @@
         renderMotoboyLoginScreen();
       };
 
-      window.submitMotoboyLogin = function(selectedId, inputPin) {
-        const cred = MOTO_CREDENTIALS.find(m => m.id === selectedId);
+      window.toggleCustomLoginName = function() {
+        const sel = document.getElementById("login-moto-select");
+        const inp = document.getElementById("login-moto-name-input");
+        const btn = document.getElementById("btn-toggle-custom-name");
+        if (!inp || !sel) return;
+        if (inp.classList.contains("hidden")) {
+          inp.classList.remove("hidden");
+          sel.classList.add("hidden");
+          inp.focus();
+          if (btn) btn.textContent = "Selecionar da lista";
+        } else {
+          inp.classList.add("hidden");
+          sel.classList.remove("hidden");
+          if (btn) btn.textContent = "Digitar outro nome";
+        }
+      };
+
+      window.handleLoginSubmit = function() {
+        const sel = document.getElementById("login-moto-select");
+        const inp = document.getElementById("login-moto-name-input");
+        const pinInput = document.getElementById("login-moto-pin");
+        const isCustom = inp && !inp.classList.contains("hidden");
+        const nameVal = isCustom ? (inp.value || "") : (sel ? sel.value : "");
+        const pinVal = pinInput ? pinInput.value : "";
+        window.submitMotoboyLogin(nameVal, pinVal);
+      };
+
+      window.submitMotoboyLogin = function(nameVal, inputPin) {
+        MOTO_CREDENTIALS = getAppMotoboyCredentials();
+        const cleanName = String(nameVal || "").trim().toLowerCase();
+        const cleanPin = String(inputPin || "").trim();
+
+        if (!cleanName) {
+          renderMotoboyLoginScreen("⚠️ Por favor, digite ou selecione seu nome.");
+          return;
+        }
+
+        const cred = MOTO_CREDENTIALS.find(m =>
+          m.nome.toLowerCase() === cleanName ||
+          m.id.toLowerCase() === cleanName ||
+          (m.user && m.user.toLowerCase() === cleanName)
+        );
+
         if (!cred) {
-          renderMotoboyLoginScreen("⚠️ Selecione um entregador válido.");
-          return;
-        }
-        if (String(inputPin).trim() !== String(cred.pin)) {
           if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-          renderMotoboyLoginScreen("❌ PIN incorreto! Verifique sua senha de acesso.");
+          renderMotoboyLoginScreen(`❌ Entregador "${nameVal}" não encontrado. Cadastre seu nome no painel da loja.`);
           return;
         }
+
+        if (cleanPin !== String(cred.pin).trim()) {
+          if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+          renderMotoboyLoginScreen(`❌ Senha de acesso incorreta para ${cred.nome}.`);
+          return;
+        }
+
         loggedMotoId = cred.id;
-        localStorage.setItem("iago_logged_motoboy_id", loggedMotoId);
+        localStorage.setItem("iago_logged_motoboy_id", cred.id);
+        localStorage.setItem("iago_logged_motoboy_name", cred.nome);
         initMotoboySession();
       };
 
