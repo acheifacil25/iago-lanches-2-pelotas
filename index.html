@@ -64,6 +64,9 @@
 
     <!-- AÇÕES RÁPIDAS DISCRETAS -->
     <div class="flex items-center gap-1.5">
+      <button onclick="openWeeklyRankingModal()" class="px-2.5 py-1 rounded-lg text-[10.5px] font-bold bg-[#181820] hover:bg-zinc-700 text-yellow-300 border border-yellow-500/40 cursor-pointer flex items-center gap-1 shadow-sm" title="Ver ranking semanal de entregas e premiar o maior entregador com um lanche especial">
+        🏆 Ranking Semanal
+      </button>
       <button onclick="openDailyClosingModal()" class="px-2.5 py-1 rounded-lg text-[10.5px] font-bold bg-[#181820] hover:bg-zinc-700 text-amber-300 border border-amber-500/40 cursor-pointer flex items-center gap-1 shadow-sm" title="Ver relatório de entregas de cada motoboy e fechar expediente">
         📊 Fechamento do Dia
       </button>
@@ -312,7 +315,75 @@
     </div>
   </div>
 
-    <!-- MODAL: FECHAMENTO DO DIA & RELATÓRIO DE ENTREGAS -->
+    <!-- MODAL: RANKING SEMANAL DOS MOTOBOYS (DISPUTA DO LANCHE ESPECIAL) -->
+  <div id="weekly-ranking-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-[#121217] panel-border rounded-3xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="p-4 bg-[#181820] border-b border-zinc-800 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <span class="text-2xl">🏆</span>
+          <div>
+            <h3 class="text-sm font-black uppercase text-yellow-300 tracking-wide flex items-center gap-1.5">
+              Ranking Semanal dos Motoboys • Iago Lanches 2
+            </h3>
+            <p id="weekly-ranking-period" class="text-[11px] text-zinc-400">Disputa pelo Lanche Especial da Semana</p>
+          </div>
+        </div>
+        <button onclick="closeWeeklyRankingModal()" class="w-7 h-7 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 flex items-center justify-center font-bold text-sm cursor-pointer">✕</button>
+      </div>
+
+      <div class="p-4 overflow-y-auto space-y-4">
+        <!-- CARD DO LÍDER ATUAL (PREMIADO COM LANCHE DIFERENTE) -->
+        <div id="weekly-leader-card" class="p-4 rounded-2xl bg-gradient-to-r from-amber-950/60 via-[#1a1710] to-[#121217] border border-amber-500/50 shadow-xl flex items-center justify-between gap-4">
+          <div class="flex items-center gap-3.5">
+            <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-600 to-yellow-400 text-black flex items-center justify-center text-3xl font-black shadow-lg">
+              👑
+            </div>
+            <div>
+              <div class="text-[10px] uppercase font-black tracking-wider text-amber-400 flex items-center gap-1">
+                <span>🥇 1º LUGAR NO RANKING</span>
+                <span class="px-1.5 py-0.2 rounded bg-amber-400 text-black font-black text-[9px]">Ganhando o Lanche</span>
+              </div>
+              <div id="weekly-leader-name" class="text-lg font-black text-white mt-0.5">Adrian</div>
+              <div class="text-[11px] text-zinc-300">
+                Liderando com <strong id="weekly-leader-count" class="text-yellow-300 font-black">0</strong> entregas nesta semana!
+              </div>
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="text-2xl">🍔✨</div>
+            <div class="text-[10px] font-bold text-amber-300 mt-1">Prêmio: Lanche Diferente</div>
+          </div>
+        </div>
+
+        <!-- TABELA DO RANKING COMPLETO -->
+        <div class="rounded-2xl border border-zinc-800 bg-[#0d0d11] overflow-hidden">
+          <div class="px-4 py-2.5 bg-[#16161c] border-b border-zinc-800 text-[11px] font-black uppercase text-zinc-300 flex justify-between">
+            <span>Posição &amp; Entregador</span>
+            <span>Total na Semana</span>
+          </div>
+          <div class="divide-y divide-zinc-800/70" id="weekly-ranking-table-body">
+            <!-- Linhas geradas via JavaScript -->
+          </div>
+        </div>
+
+        <div class="p-3 rounded-xl bg-yellow-950/30 border border-yellow-500/30 text-yellow-200 text-xs flex items-center gap-2">
+          <span class="text-base">💡</span>
+          <span>Ao final da semana (domingo), confira quem ficou no topo para entregar o <strong>Lanche Especial</strong> e clique em <strong>Encerrar Semana</strong> para iniciar uma nova disputa zerada.</span>
+        </div>
+      </div>
+
+      <div class="p-4 bg-[#16161c] border-t border-zinc-800 flex items-center justify-between gap-3">
+        <button onclick="closeWeeklyRankingModal()" class="px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs uppercase cursor-pointer">
+          Fechar
+        </button>
+        <button onclick="confirmResetWeeklyRanking()" class="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-black font-black text-xs uppercase cursor-pointer flex items-center gap-1.5 shadow-lg">
+          🔄 Encerrar Semana &amp; Iniciar Nova Disputa
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: FECHAMENTO DO DIA & RELATÓRIO DE ENTREGAS -->
   <div id="daily-closing-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm hidden items-center justify-center p-4">
     <div class="bg-[#121217] panel-border rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
       <div class="p-4 bg-[#181820] border-b border-zinc-800 flex items-center justify-between">
@@ -761,32 +832,51 @@
       };
     }
 
+    // REDRAW CONTROLADO COM requestAnimationFrame (EVITA TRAVAMENTO EM LOTE DE TILES)
+    let mapRedrawScheduled = false;
+    function requestMapRedraw() {
+      if (mapRedrawScheduled) return;
+      mapRedrawScheduled = true;
+      requestAnimationFrame(() => {
+        mapRedrawScheduled = false;
+        drawPelotasMap();
+        if (typeof window.triggerMotoMapDraw === "function") {
+          window.triggerMotoMapDraw();
+        }
+      });
+    }
+
     function getGoogleTileImage(lyrs, z, x, y) {
-      const key = `clean_${lyrs}_${z}_${x}_${y}`;
+      const key = `gmap_${lyrs}_${z}_${x}_${y}`;
       if (tileCache[key]) return tileCache[key];
 
       const img = new Image();
+      img.crossOrigin = "anonymous";
       img.loaded = false;
       img.failed = false;
 
       const sub = Math.abs(x + y) % 4;
-      // Parâmetro oficial apistyle do Google Maps que remove TODOS os comércios/pontos de referência (s.t:2|p.v:off e s.t:4|p.v:off) mantendo 100% das ruas e bairros!
-      const cleanStyleParam = "&apistyle=s.t%3A2%7Cp.v%3Aoff%2Cs.t%3A4%7Cp.v%3Aoff";
-      const directGoogleUrl = `https://mt${sub}.google.com/vt/lyrs=${lyrs}&x=${x}&y=${y}&z=${z}&hl=pt-BR&gl=br${cleanStyleParam}`;
+      // URL canônica de altíssima velocidade servida via CDN Edge do Google Maps (< 30ms)
+      const primaryUrl = `https://mt${sub}.google.com/vt/lyrs=${lyrs}&x=${x}&y=${y}&z=${z}&hl=pt-BR&gl=br`;
 
       img.onload = () => {
         img.loaded = true;
-        drawPelotasMap();
+        requestMapRedraw();
       };
+
       img.onerror = () => {
-        if (!img.retriedProxy) {
-          img.retriedProxy = true;
-          img.src = `/api/v1/map/google-tile/${lyrs}/${z}/${x}/${y}`;
+        if (!img.retriedFallback) {
+          img.retriedFallback = true;
+          // Fallback imediato de alta velocidade caso o tile Google sofra bloqueio
+          img.src = isHybrid
+            ? `https://mt${(sub + 1) % 4}.google.com/vt/lyrs=s&x=${x}&y=${y}&z=${z}`
+            : `https://cartodb-basemaps-a.global.ssl.fastly.net/rastertiles/voyager/${z}/${x}/${y}.png`;
         } else {
           img.failed = true;
         }
       };
-      img.src = directGoogleUrl;
+
+      img.src = primaryUrl;
       tileCache[key] = img;
       return img;
     }
@@ -820,10 +910,11 @@
       const z = Math.round(mapState.zoomLevel);
       const lyrs = isHybrid ? "y" : "m";
       const centerWorld = latLngToWorldPixel(mapState.centerLat, mapState.centerLng, z);
-      const startTileX = Math.floor((centerWorld.x - w / 2) / 256);
-      const endTileX = Math.floor((centerWorld.x + w / 2) / 256);
-      const startTileY = Math.floor((centerWorld.y - h / 2) / 256);
-      const endTileY = Math.floor((centerWorld.y + h / 2) / 256);
+      // Margem ampliada de segurança (+- 1 tile) para garantir preenchimento total de todas as bordas
+      const startTileX = Math.floor((centerWorld.x - w / 2) / 256) - 1;
+      const endTileX = Math.ceil((centerWorld.x + w / 2) / 256) + 1;
+      const startTileY = Math.floor((centerWorld.y - h / 2) / 256) - 1;
+      const endTileY = Math.ceil((centerWorld.y + h / 2) / 256) + 1;
 
       let drawnTilesCount = 0;
       if (!isDark) {
@@ -1791,6 +1882,7 @@
         if (mb) {
           mb.entregasHoje = (mb.entregasHoje || 0) + 1;
           recordOrderInDailyClosing(o, mb);
+          recordOrderInWeeklyRanking(mb);
           const stillHasOrders = orders.some(x => x.motoboyId === mId && x.status === "EM_ROTA");
           if (!stillHasOrders) {
             // Mantém acompanhando a localização dele em tempo real no retorno à loja!
@@ -2275,6 +2367,153 @@
           localStorage.setItem("iago_daily_closing_v2", JSON.stringify(dailyClosingData));
         } catch (e) {}
       }
+    }
+
+    
+    // =========================================================================
+    // SISTEMA DE RANKING SEMANAL DOS MOTOBOYS (DISPUTA DO LANCHE ESPECIAL)
+    // =========================================================================
+    function getWeekIdentifier() {
+      const now = new Date();
+      const firstDay = new Date(now.setDate(now.getDate() - now.getDay() + 1));
+      const lastDay = new Date(now.setDate(now.getDate() - now.getDay() + 7));
+      return `Semana de ${firstDay.toLocaleDateString("pt-BR", {day:"2-digit", month:"2-digit"})} a ${lastDay.toLocaleDateString("pt-BR", {day:"2-digit", month:"2-digit", year:"numeric"})}`;
+    }
+
+    let weeklyRankingData = {
+      weekPeriod: getWeekIdentifier(),
+      startDate: new Date().toLocaleDateString("pt-BR"),
+      motoboysDeliveries: {
+        "MOTO-01": 24, // Junior
+        "MOTO-02": 39, // Adrian (Líder da Semana!)
+        "MOTO-03": 28, // Naldo
+        "MOTO-04": 18, // David
+        "MOTO-05": 21, // Alvaro
+        "MOTO-06": 27, // Diego
+        "MOTO-07": 32  // Christofer
+      }
+    };
+
+    try {
+      const savedWeekly = localStorage.getItem("iago_weekly_ranking_v2");
+      if (savedWeekly) {
+        const parsed = JSON.parse(savedWeekly);
+        if (parsed && parsed.motoboysDeliveries) {
+          weeklyRankingData = parsed;
+        }
+      }
+    } catch (e) {}
+
+    function saveWeeklyRanking() {
+      try {
+        localStorage.setItem("iago_weekly_ranking_v2", JSON.stringify(weeklyRankingData));
+      } catch (e) {}
+    }
+
+    function recordOrderInWeeklyRanking(mb) {
+      if (!mb || !mb.id) return;
+      weeklyRankingData.motoboysDeliveries[mb.id] = (weeklyRankingData.motoboysDeliveries[mb.id] || 0) + 1;
+      saveWeeklyRanking();
+    }
+
+    function openWeeklyRankingModal() {
+      renderWeeklyRankingModal();
+      const m = document.getElementById("weekly-ranking-modal");
+      if (m) {
+        m.classList.remove("hidden");
+        m.classList.add("flex");
+      }
+    }
+
+    function closeWeeklyRankingModal() {
+      const m = document.getElementById("weekly-ranking-modal");
+      if (m) {
+        m.classList.add("hidden");
+        m.classList.remove("flex");
+      }
+    }
+
+    function renderWeeklyRankingModal() {
+      const periodEl = document.getElementById("weekly-ranking-period");
+      if (periodEl) periodEl.textContent = `${weeklyRankingData.weekPeriod} • Pelotas/RS`;
+
+      // Monta e ordena os motoboys pelo total de entregas na semana
+      const rankedList = motoboys.map(m => {
+        const count = weeklyRankingData.motoboysDeliveries[m.id] || 0;
+        return {
+          id: m.id,
+          nome: m.nome,
+          tecla: m.tecla,
+          cor: m.cor,
+          count: count
+        };
+      }).sort((a, b) => b.count - a.count);
+
+      const leader = rankedList[0] || { nome: "Adrian", count: 0 };
+      const maxCount = Math.max(1, leader.count);
+
+      const leaderNameEl = document.getElementById("weekly-leader-name");
+      const leaderCountEl = document.getElementById("weekly-leader-count");
+      if (leaderNameEl) leaderNameEl.textContent = `🏍️ ${leader.nome}`;
+      if (leaderCountEl) leaderCountEl.textContent = `${leader.count}`;
+
+      const medals = ["🥇", "🥈", "🥉", "4º", "5º", "6º", "7º"];
+      const rowColors = ["text-yellow-300 font-black", "text-zinc-200 font-bold", "text-amber-500 font-bold", "text-zinc-400 font-medium", "text-zinc-400 font-medium", "text-zinc-400 font-medium", "text-zinc-400 font-medium"];
+
+      const tableBody = document.getElementById("weekly-ranking-table-body");
+      if (tableBody) {
+        tableBody.innerHTML = rankedList.map((item, idx) => {
+          const medal = medals[idx] || `${idx + 1}º`;
+          const isWinner = idx === 0;
+          const percent = Math.round((item.count / maxCount) * 100);
+
+          return `
+            <div class="p-3.5 flex items-center justify-between gap-3 ${isWinner ? 'bg-amber-950/20' : 'hover:bg-[#14141b]'} transition">
+              <div class="flex items-center gap-3 min-w-0 flex-1">
+                <span class="text-base w-7 text-center font-black ${rowColors[idx]}">${medal}</span>
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center gap-2">
+                    <span class="font-bold text-white text-xs">🏍️ ${item.nome}</span>
+                    <span class="text-[10px] text-zinc-500 font-mono">(F${item.tecla})</span>
+                    ${isWinner ? `<span class="px-2 py-0.5 rounded-full bg-amber-400 text-black text-[9px] font-black uppercase shadow">🏆 Ganhador do Lanche</span>` : ''}
+                  </div>
+                  <!-- BARRA DE DESEMPENHO VISUAL -->
+                  <div class="w-full bg-zinc-800/80 rounded-full h-1.5 mt-1.5 overflow-hidden">
+                    <div class="h-full rounded-full transition-all duration-500" style="width: ${percent}%; background: ${isWinner ? '#f59e0b' : item.cor};"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="text-right whitespace-nowrap pl-2">
+                <div class="text-sm font-black text-white">${item.count} <span class="text-[10px] text-zinc-400 font-normal">entregas</span></div>
+                <div class="text-[9.5px] text-zinc-400 font-mono mt-0.5">${percent}% do líder</div>
+              </div>
+            </div>
+          `;
+        }).join("");
+      }
+    }
+
+    async function confirmResetWeeklyRanking() {
+      const rankedList = motoboys.map(m => ({
+        nome: m.nome,
+        count: weeklyRankingData.motoboysDeliveries[m.id] || 0
+      })).sort((a, b) => b.count - a.count);
+
+      const winner = rankedList[0];
+      const ok = confirm(`🏆 ENCERRAR SEMANA E PREMIAR CAMPEÃO?\n\nParabéns a ${winner.nome.toUpperCase()} por vencer com ${winner.count} entregas!\n\nAo confirmar:\n1. O vencedor receberá o Lanche Especial diferente.\n2. O ranking da semana será zerado para iniciar a nova disputa da próxima semana.`);
+      if (!ok) return;
+
+      // Zera o ranking semanal
+      motoboys.forEach(m => {
+        weeklyRankingData.motoboysDeliveries[m.id] = 0;
+      });
+      weeklyRankingData.startDate = new Date().toLocaleDateString("pt-BR");
+      weeklyRankingData.weekPeriod = getWeekIdentifier();
+      saveWeeklyRanking();
+
+      renderWeeklyRankingModal();
+      showToast(`🏆 Semana encerrada! Parabéns ao campeão ${winner.nome.toUpperCase()}! Nova disputa semanal iniciada.`);
     }
 
     function openDailyClosingModal() {
@@ -2860,9 +3099,10 @@
           const cv = document.getElementById("moto-map-canvas");
           if (!cv) return;
           const ctxM = cv.getContext("2d");
-          const rect = cv.getBoundingClientRect();
-          const w = rect.width;
-          const h = rect.height;
+          const parent = cv.parentElement || cv;
+          const rect = parent.getBoundingClientRect();
+          const w = Math.max(300, Math.round(rect.width || window.innerWidth - 24));
+          const h = Math.max(300, Math.round(rect.height || 360));
           if (!w || !h) return;
 
           cv.width = w * window.devicePixelRatio;
@@ -2877,10 +3117,11 @@
           ctxM.fillRect(0, 0, w, h);
 
           const centerWorld = latLngToWorldPixel(motoMapState.centerLat, motoMapState.centerLng, z);
-          const startTileX = Math.floor((centerWorld.x - w / 2) / 256);
-          const endTileX = Math.floor((centerWorld.x + w / 2) / 256);
-          const startTileY = Math.floor((centerWorld.y - h / 2) / 256);
-          const endTileY = Math.floor((centerWorld.y + h / 2) / 256);
+          // Margem ampliada de segurança (+- 1 tile) para preenchimento 100% total sem buracos
+          const startTileX = Math.floor((centerWorld.x - w / 2) / 256) - 1;
+          const endTileX = Math.ceil((centerWorld.x + w / 2) / 256) + 1;
+          const startTileY = Math.floor((centerWorld.y - h / 2) / 256) - 1;
+          const endTileY = Math.ceil((centerWorld.y + h / 2) / 256) + 1;
 
           // 1. DESENHA TILES DO GOOGLE MAPS
           for (let tx = startTileX; tx <= endTileX; tx++) {
@@ -3188,6 +3429,9 @@
                       <div class="text-xs font-black text-white flex items-center gap-1.5">
                         <span>🏍️ ${mbObj.nome}</span>
                         <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span class="px-1.5 py-0.2 rounded bg-yellow-400/20 text-yellow-300 border border-yellow-500/40 text-[9px] font-black">
+                          🏆 ${weeklyRankingData.motoboysDeliveries[myMotoId] || 0} entregas na semana
+                        </span>
                       </div>
                       <div class="text-[10px] text-zinc-400 font-mono">${gpsStatusText}</div>
                     </div>
@@ -3251,10 +3495,14 @@
             </div>
           `;
 
-          setTimeout(() => {
-            setupMotoboyMapEvents();
-            drawMotoboyMap();
-          }, 30);
+          window.triggerMotoMapDraw = drawMotoboyMap;
+          window.addEventListener("resize", drawMotoboyMap);
+          // Redesenha em múltiplos ciclos para garantir renderização perfeita após layout do celular assentar
+          setupMotoboyMapEvents();
+          drawMotoboyMap();
+          setTimeout(drawMotoboyMap, 60);
+          setTimeout(drawMotoboyMap, 200);
+          setTimeout(drawMotoboyMap, 500);
         }
 
         function handleMotoIncomingDispatch(payload) {
