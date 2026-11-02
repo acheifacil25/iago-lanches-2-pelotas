@@ -165,37 +165,32 @@
 
       <div class="flex-1 overflow-y-auto p-2.5 space-y-2.5">
 
-        <!-- SELEÇÃO DO MOTOBOY (SEM BOTÃO WHATSAPP/ESCALA NO CANTO SUPERIOR DIREITO E SEM BOTÃO BIPAR) -->
+        <!-- SELEÇÃO DO MOTOBOY VIA BOTÕES E CAMPO DE COMANDA -->
         <div class="bg-[#0e0e12] p-2.5 rounded-xl border border-zinc-800">
-          <div class="flex items-center justify-between mb-1.5 gap-1">
-            <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-1">
-              Motoboy Selecionado:
-            </span>
+          <!-- STATUS DO MOTOBOY ATUALMENTE SELECIONADO -->
+          <div id="active-motoboy-stats" class="mb-2"></div>
+
+          <!-- BOTÕES DE SELEÇÃO DOS MOTOBOYS (CLIQUE APENAS SELECIONA; ATALHOS F1..Fn) -->
+          <div class="text-[9.5px] font-bold uppercase text-zinc-400 mb-1 flex items-center justify-between">
+            <span>Selecione o Motoboy:</span>
+            <span class="text-zinc-500 font-mono text-[9px]">Atalhos F1 a F7</span>
           </div>
+          <div id="quick-motoboy-dispatch-grid" class="grid grid-cols-4 gap-1 mb-2.5"></div>
 
-          <select id="active-motoboy-select" onchange="onChangeActiveMotoboy(this.value)" class="w-full bg-[#16161d] text-zinc-100 font-bold text-xs px-2.5 py-2 rounded-lg border border-zinc-700 focus:outline-none">
-          </select>
-
-          <div id="active-motoboy-stats" class="mt-1.5 flex items-center justify-between text-[10px] text-zinc-400 px-1"></div>
-
-          <!-- CAMPO DE LEITURA DA COMANDA (SEM BOTÃO BIPAR AO LADO) -->
-          <div class="mt-2.5 pt-2.5 border-t border-zinc-800">
-            <label class="block text-[10px] font-bold uppercase text-zinc-400 mb-1">
-              Passe a Leitora OU Digite o Nº da Comanda (Enter):
+          <!-- CAMPO DE LEITURA DA COMANDA (ENTER DESPACHA PARA O MOTOBOY SELECIONADO) -->
+          <div class="pt-2 border-t border-zinc-800">
+            <label class="block text-[10px] font-bold uppercase text-zinc-400 mb-1 flex items-center justify-between">
+              <span>Nº da Comanda / Leitora:</span>
+              <span class="text-emerald-400 font-mono text-[9.5px]">Enter = Despachar</span>
             </label>
             <input
               id="barcode-manual-input"
               type="text"
-              placeholder="Ex: 48, 46, 44, 42..."
+              placeholder="Digite o nº da comanda e tecle Enter..."
               oninput="onTicketInputChange(this.value)"
               onkeydown="if(event.key==='Enter') triggerManualBeep()"
-              class="w-full bg-[#16161d] text-sm font-bold text-white px-3 py-2 rounded-lg border border-zinc-700 focus:border-zinc-400 focus:outline-none font-mono"
+              class="w-full bg-[#16161d] text-sm font-bold text-white px-3 py-2 rounded-lg border border-zinc-700 focus:border-amber-400 focus:outline-none font-mono"
             />
-          </div>
-
-          <!-- GRADE DOS MOTOBOYS PARA DESPACHAR COM 1 CLIQUE -->
-          <div class="mt-2.5 pt-2 border-t border-zinc-800/80">
-            <div id="quick-motoboy-dispatch-grid" class="grid grid-cols-4 gap-1"></div>
           </div>
         </div>
 
@@ -218,14 +213,47 @@
   <!-- MODAL ESCALA DO DIA (ATIVAR/DESATIVAR MOTOBOYS) & WHATSAPP -->
   <div id="whatsapp-config-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
     <div class="bg-[#121216] border border-emerald-500/50 rounded-2xl max-w-xl w-full overflow-hidden shadow-2xl">
-      <div class="p-4 bg-[#18181f] border-b border-zinc-800 flex items-center justify-between">
+      <div class="p-4 bg-[#18181f] border-b border-zinc-800 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 class="text-sm font-black uppercase text-emerald-400">🏍️ Escala do Dia (Ativar/Desativar) &amp; WhatsApp dos Motoboys</h3>
-          <p class="text-[11px] text-zinc-400">Desative os motoboys que estão de folga hoje para que não apareçam no mapa nem na fila de bip</p>
+          <h3 class="text-sm font-black uppercase text-emerald-400">🏍️ Escala do Dia &amp; Cadastro de Entregadores</h3>
+          <p class="text-[11px] text-zinc-400">Ative/desative folgas, gerencie senhas de acesso ou cadastre novos motoboys</p>
         </div>
-        <button onclick="closeWhatsAppConfigModal()" class="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-red-600 text-xs font-bold cursor-pointer">✕</button>
+        <div class="flex items-center gap-1.5">
+          <button onclick="toggleNewMotoboyForm()" class="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-black uppercase text-xs flex items-center gap-1 cursor-pointer shadow">
+            ➕ Cadastrar Entregador
+          </button>
+          <button onclick="closeWhatsAppConfigModal()" class="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-red-600 text-xs font-bold cursor-pointer">✕</button>
+        </div>
       </div>
-      <div id="whatsapp-motoboys-form" class="p-4 space-y-2 max-h-[65vh] overflow-y-auto text-xs"></div>
+
+      <!-- FORMULÁRIO DE CADASTRO DE NOVO ENTREGADOR -->
+      <div id="new-motoboy-form-container" class="hidden p-4 bg-[#0c0c10] border-b border-zinc-800 space-y-2.5">
+        <div class="text-xs font-black uppercase text-amber-400 flex items-center justify-between">
+          <span>➕ Cadastrar Novo Entregador</span>
+          <button onclick="toggleNewMotoboyForm(false)" class="text-zinc-400 hover:text-white text-xs cursor-pointer">Cancelar ✕</button>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+          <div>
+            <label class="block text-[10px] font-bold uppercase text-zinc-400 mb-1">Nome do Entregador:</label>
+            <input id="new-mb-name" type="text" placeholder="Ex: Lucas, Mateus..." class="w-full bg-[#16161f] text-white font-bold px-3 py-2 rounded-lg border border-zinc-700 focus:border-amber-400 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold uppercase text-zinc-400 mb-1">WhatsApp / Celular:</label>
+            <input id="new-mb-phone" type="text" placeholder="Ex: 53981112233" class="w-full bg-[#16161f] text-white font-bold px-3 py-2 rounded-lg border border-zinc-700 focus:border-amber-400 focus:outline-none font-mono" />
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold uppercase text-zinc-400 mb-1">Senha de Acesso (PIN):</label>
+            <input id="new-mb-pin" type="text" placeholder="Ex: 8888" class="w-full bg-[#16161f] text-amber-300 font-mono font-black px-3 py-2 rounded-lg border border-zinc-700 focus:border-amber-400 focus:outline-none text-center" />
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 pt-1">
+          <button onclick="saveNewMotoboy()" class="px-4 py-2 rounded-lg bg-amber-400 hover:bg-amber-300 text-black font-black uppercase text-xs cursor-pointer shadow">
+            💾 Salvar e Adicionar Entregador
+          </button>
+        </div>
+      </div>
+
+      <div id="whatsapp-motoboys-form" class="p-4 space-y-2 max-h-[60vh] overflow-y-auto text-xs"></div>
       <div class="p-3 bg-[#18181f] border-t border-zinc-800 flex justify-between items-center gap-2">
         <span class="text-[10.5px] text-zinc-400">As alterações ficam salvas automaticamente.</span>
         <button onclick="closeWhatsAppConfigModal()" class="px-4 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-black uppercase text-xs cursor-pointer">
@@ -534,23 +562,48 @@
       { n: "Rua Jardim de Allah", hw: "residential", c: [[-31.6880,-52.3445],[-31.6850,-52.3400],[-31.6831,-52.337179]] }
     ];
 
-    // OS 7 MOTOBOYS REAIS DA EMPRESA NO FACITY (COM RASTREIO EM ROTA E OPÇÃO DE ATIVAR/DESATIVAR NO DIA)
-    let motoboys = [
-      { id: "MOTO-01", tecla: "1", facityId: "055efb24-b53b-40c6-ab7b-7ae4b7ffef2e", username: "junior", nome: "Junior", whatsapp: "53981017420", ativoHoje: true, status: "DISPONIVEL_BALCAO", lat: STORE_BASE.lat, lng: STORE_BASE.lng, routeProgress: 0.0, entregasHoje: 9, cor: "#10b981" },
-      { id: "MOTO-02", tecla: "2", facityId: "3b051bfb-3f01-4dd3-8639-1f07b0e64866", username: "adrian", nome: "Adrian", whatsapp: "53981017420", ativoHoje: true, status: "EM_ROTA", lat: -31.7256, lng: -52.3452, routeProgress: 0.62, entregasHoje: 12, cor: "#38bdf8" },
-      { id: "MOTO-03", tecla: "3", facityId: "2c93d1ba-bda8-4af8-a3c5-7f705c266031", username: "naldo", nome: "Naldo", whatsapp: "53981017420", ativoHoje: true, status: "EM_ROTA", lat: -31.7140, lng: -52.3360, routeProgress: 0.55, entregasHoje: 11, cor: "#a855f7" },
-      { id: "MOTO-04", tecla: "4", facityId: "a8587348-bc89-4876-8f10-5378909e1860", username: "david", nome: "David", whatsapp: "53981017420", ativoHoje: true, status: "DISPONIVEL_BALCAO", lat: STORE_BASE.lat, lng: STORE_BASE.lng, routeProgress: 0.0, entregasHoje: 7, cor: "#f43f5e" },
-      { id: "MOTO-05", tecla: "5", facityId: "cbb541ed-135b-4fa1-9af6-e39598f74320", username: "alvaro", nome: "Alvaro", whatsapp: "53981017420", ativoHoje: true, status: "DISPONIVEL_BALCAO", lat: STORE_BASE.lat, lng: STORE_BASE.lng, routeProgress: 0.0, entregasHoje: 8, cor: "#eab308" },
-      { id: "MOTO-06", tecla: "6", facityId: "60a2efc7-798a-4364-9509-965d1d2ead8b", username: "diego", nome: "Diego", whatsapp: "53981017420", ativoHoje: true, status: "EM_ROTA", lat: -31.7195, lng: -52.3510, routeProgress: 0.48, entregasHoje: 10, cor: "#06b6d4" },
-      { id: "MOTO-07", tecla: "7", facityId: "41e88ed5-c374-45ed-b9d7-2b00d5fae044", username: "christofer", nome: "Christofer", whatsapp: "53981017420", ativoHoje: true, status: "EM_ROTA", lat: -31.7110, lng: -52.3310, routeProgress: 0.72, entregasHoje: 11, cor: "#ec4899" }
+    // OS MOTOBOYS DA EMPRESA (COM SENHAS E CADASTRO DINÂMICO PERSISTENTE)
+    const BASE_DEFAULT_MOTOBOYS = [
+      { id: "MOTO-01", tecla: "1", facityId: "055efb24-b53b-40c6-ab7b-7ae4b7ffef2e", username: "junior", nome: "Junior", whatsapp: "53981017420", pin: "1111", ativoHoje: true, status: "DISPONIVEL_BALCAO", lat: STORE_BASE.lat, lng: STORE_BASE.lng, routeProgress: 0.0, entregasHoje: 9, cor: "#10b981" },
+      { id: "MOTO-02", tecla: "2", facityId: "3b051bfb-3f01-4dd3-8639-1f07b0e64866", username: "adrian", nome: "Adrian", whatsapp: "53981017420", pin: "2222", ativoHoje: true, status: "EM_ROTA", lat: -31.7256, lng: -52.3452, routeProgress: 0.62, entregasHoje: 12, cor: "#38bdf8" },
+      { id: "MOTO-03", tecla: "3", facityId: "2c93d1ba-bda8-4af8-a3c5-7f705c266031", username: "naldo", nome: "Naldo", whatsapp: "53981017420", pin: "3333", ativoHoje: true, status: "EM_ROTA", lat: -31.7140, lng: -52.3360, routeProgress: 0.55, entregasHoje: 11, cor: "#a855f7" },
+      { id: "MOTO-04", tecla: "4", facityId: "a8587348-bc89-4876-8f10-5378909e1860", username: "david", nome: "David", whatsapp: "53981017420", pin: "4444", ativoHoje: true, status: "DISPONIVEL_BALCAO", lat: STORE_BASE.lat, lng: STORE_BASE.lng, routeProgress: 0.0, entregasHoje: 7, cor: "#f43f5e" },
+      { id: "MOTO-05", tecla: "5", facityId: "cbb541ed-135b-4fa1-9af6-e39598f74320", username: "alvaro", nome: "Alvaro", whatsapp: "53981017420", pin: "5555", ativoHoje: true, status: "DISPONIVEL_BALCAO", lat: STORE_BASE.lat, lng: STORE_BASE.lng, routeProgress: 0.0, entregasHoje: 8, cor: "#eab308" },
+      { id: "MOTO-06", tecla: "6", facityId: "60a2efc7-798a-4364-9509-965d1d2ead8b", username: "diego", nome: "Diego", whatsapp: "53981017420", pin: "6666", ativoHoje: true, status: "EM_ROTA", lat: -31.7195, lng: -52.3510, routeProgress: 0.48, entregasHoje: 10, cor: "#06b6d4" },
+      { id: "MOTO-07", tecla: "7", facityId: "41e88ed5-c374-45ed-b9d7-2b00d5fae044", username: "christofer", nome: "Christofer", whatsapp: "53981017420", pin: "7777", ativoHoje: true, status: "EM_ROTA", lat: -31.7110, lng: -52.3310, routeProgress: 0.72, entregasHoje: 11, cor: "#ec4899" }
     ];
 
-    try {
-      const savedActive = JSON.parse(localStorage.getItem("iago_motoboys_ativos") || "{}");
-      motoboys.forEach(m => {
-        if (typeof savedActive[m.id] === "boolean") m.ativoHoje = savedActive[m.id];
-      });
-    } catch (e) {}
+    function loadMotoboysList() {
+      let list = BASE_DEFAULT_MOTOBOYS.map(m => ({ ...m }));
+      try {
+        const savedCustom = JSON.parse(localStorage.getItem("iago_custom_motoboys_v3") || "[]");
+        if (Array.isArray(savedCustom)) {
+          savedCustom.forEach(c => {
+            const exIdx = list.findIndex(m => m.id === c.id || m.nome.toLowerCase() === c.nome.toLowerCase());
+            if (exIdx !== -1) {
+              list[exIdx] = { ...list[exIdx], ...c };
+            } else {
+              list.push(c);
+            }
+          });
+        }
+        const savedActive = JSON.parse(localStorage.getItem("iago_motoboys_ativos") || "{}");
+        list.forEach(m => {
+          if (typeof savedActive[m.id] === "boolean") m.ativoHoje = savedActive[m.id];
+        });
+        const savedWa = JSON.parse(localStorage.getItem("iago_motoboys_wa") || "{}");
+        list.forEach(m => {
+          if (savedWa[m.id]) m.whatsapp = savedWa[m.id];
+        });
+        const savedPins = JSON.parse(localStorage.getItem("iago_motoboys_pins") || "{}");
+        list.forEach(m => {
+          if (savedPins[m.id]) m.pin = savedPins[m.id];
+        });
+      } catch (e) {}
+      return list;
+    }
+
+    let motoboys = loadMotoboysList();
 
     function getActiveMotoboys() {
       const list = motoboys.filter(m => m.ativoHoje !== false);
@@ -1279,12 +1332,14 @@
     let lastKeyTime = 0;
 
     window.addEventListener("keydown", e => {
-      if (e.key >= "F1" && e.key <= "F7") {
+      if (e.key >= "F1" && e.key <= "F12") {
         e.preventDefault();
-        const idx = parseInt(e.key.replace("F", ""), 10) - 1;
-        if (motoboys[idx]) {
-          onChangeActiveMotoboy(motoboys[idx].id);
-          showToast(`🏍️ Motoboy ${motoboys[idx].nome} selecionado! Passe a maquininha leitora na comanda.`);
+        const num = parseInt(e.key.replace("F", ""), 10);
+        const activeList = getActiveMotoboys();
+        const mb = activeList.find(m => String(m.tecla) === String(num)) || activeList[num - 1] || motoboys[num - 1];
+        if (mb) {
+          onChangeActiveMotoboy(mb.id);
+          showToast(`🏍️ Motoboy ${mb.nome} selecionado! Digite o número da comanda e aperte Enter.`);
         }
         return;
       }
@@ -1647,27 +1702,42 @@
       const countBadge = document.getElementById("active-motoboys-count-badge");
       if (countBadge) countBadge.textContent = `${activeList.length}/${motoboys.length}`;
 
-      const sel = document.getElementById("active-motoboy-select");
-      sel.innerHTML = activeList.map(m => `
-        <option value="${m.id}" ${m.id === activeMotoboyId ? 'selected' : ''}>
-          🏍️ [F${m.tecla}] ${m.nome} — WhatsApp: ${m.whatsapp} (${m.status === 'EM_ROTA' ? 'Em Rota' : 'No Balcão'})
-        </option>
-      `).join("");
-
       const activeMb = getMotoboyById(activeMotoboyId);
-      document.getElementById("active-motoboy-stats").innerHTML = `
-        <span>WhatsApp: <strong class="text-zinc-200">${activeMb.whatsapp}</strong></span>
-        <span>Entregas Hoje: <strong class="text-white">${activeMb.entregasHoje}</strong></span>
-      `;
+      const statsBox = document.getElementById("active-motoboy-stats");
+      if (statsBox) {
+        statsBox.innerHTML = `
+          <div class="p-2 rounded-lg bg-[#14141d] border border-amber-500/50 flex items-center justify-between gap-1 shadow">
+            <div class="flex items-center gap-1.5 min-w-0">
+              <span class="w-2.5 h-2.5 rounded-full" style="background:${activeMb.cor}"></span>
+              <span class="text-xs font-black text-white truncate">🏍️ ${activeMb.nome}</span>
+              ${activeMb.tecla ? `<span class="px-1.5 py-0.2 rounded bg-amber-400 text-black font-black text-[9px] font-mono">F${activeMb.tecla} SELECIONADO</span>` : '<span class="px-1.5 py-0.2 rounded bg-amber-400 text-black font-black text-[9px]">SELECIONADO</span>'}
+            </div>
+            <div class="text-[10px] text-zinc-400 whitespace-nowrap">
+              <span>Hoje: <strong class="text-white">${activeMb.entregasHoje}</strong></span>
+            </div>
+          </div>
+        `;
+      }
 
       const quickGrid = document.getElementById("quick-motoboy-dispatch-grid");
-      quickGrid.innerHTML = activeList.map(m => `
-        <button onclick="dispatchTypedOrSelectedToMotoboy('${m.id}')"
-                class="py-1.5 px-1 rounded-lg ${m.id === activeMotoboyId ? 'bg-zinc-200 text-black font-black' : 'bg-[#181820] text-zinc-300'} hover:bg-zinc-300 hover:text-black border border-zinc-700 text-[10px] font-bold transition truncate cursor-pointer"
-                title="Despachar comanda e enviar WhatsApp para ${m.nome}">
-          🏍️ ${m.nome}
-        </button>
-      `).join("");
+      if (quickGrid) {
+        quickGrid.innerHTML = activeList.map((m, idx) => {
+          const isSelected = m.id === activeMotoboyId;
+          const keyLabel = m.tecla ? `F${m.tecla}` : `F${idx + 1}`;
+          return `
+            <button onclick="onChangeActiveMotoboy('${m.id}')"
+                    class="py-1.5 px-1 rounded-lg ${
+                      isSelected
+                        ? 'bg-amber-400 text-black font-black ring-2 ring-amber-300 shadow-md scale-[1.03]'
+                        : 'bg-[#181822] text-zinc-300 hover:bg-zinc-800 border border-zinc-700'
+                    } text-[10px] font-bold transition truncate cursor-pointer flex flex-col items-center justify-center gap-0.5"
+                    title="Clique para selecionar ${m.nome} (Atalho: ${keyLabel})">
+              <span class="text-[8.5px] opacity-75 font-mono leading-none">${keyLabel}</span>
+              <span class="truncate leading-tight">🏍️ ${m.nome}</span>
+            </button>
+          `;
+        }).join("");
+      }
 
       const waitingOrders = orders.filter(o => o.status === "AGUARDANDO_DESPACHO").sort((a,b) => b.waitMinutes - a.waitMinutes);
       document.getElementById("ready-count-badge").textContent = waitingOrders.length;
@@ -1930,6 +2000,81 @@
       m.classList.add("flex");
     }
 
+    function toggleNewMotoboyForm(show) {
+      const box = document.getElementById("new-motoboy-form-container");
+      if (!box) return;
+      if (typeof show === "boolean") {
+        box.classList.toggle("hidden", !show);
+      } else {
+        box.classList.toggle("hidden");
+      }
+      if (!box.classList.contains("hidden")) {
+        setTimeout(() => {
+          const inp = document.getElementById("new-mb-name");
+          if (inp) inp.focus();
+        }, 100);
+      }
+    }
+
+    function saveNewMotoboy() {
+      const nameInp = document.getElementById("new-mb-name");
+      const phoneInp = document.getElementById("new-mb-phone");
+      const pinInp = document.getElementById("new-mb-pin");
+
+      const nome = (nameInp.value || "").trim();
+      const whatsapp = (phoneInp.value || "").trim().replace(/\D/g, "") || "53981017420";
+      const pin = (pinInp.value || "").trim() || "1234";
+
+      if (!nome) {
+        showToast("⚠️ Digite o nome do entregador!", true);
+        return;
+      }
+
+      const nextNum = motoboys.length + 1;
+      const newId = `MOTO-${String(nextNum).padStart(2, "0")}`;
+      const tecla = String(nextNum <= 12 ? nextNum : "");
+      const colors = ["#10b981", "#38bdf8", "#a855f7", "#f43f5e", "#eab308", "#06b6d4", "#ec4899", "#14b8a6", "#f97316", "#8b5cf6"];
+      const cor = colors[(nextNum - 1) % colors.length];
+
+      const newMb = {
+        id: newId,
+        tecla: tecla,
+        facityId: `cust-${Date.now()}`,
+        username: nome.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, ""),
+        nome: nome,
+        whatsapp: whatsapp,
+        pin: pin,
+        ativoHoje: true,
+        status: "DISPONIVEL_BALCAO",
+        lat: STORE_BASE.lat,
+        lng: STORE_BASE.lng,
+        routeProgress: 0.0,
+        entregasHoje: 0,
+        cor: cor
+      };
+
+      motoboys.push(newMb);
+
+      try {
+        const savedCustom = JSON.parse(localStorage.getItem("iago_custom_motoboys_v3") || "[]");
+        savedCustom.push(newMb);
+        localStorage.setItem("iago_custom_motoboys_v3", JSON.stringify(savedCustom));
+        const savedPins = JSON.parse(localStorage.getItem("iago_motoboys_pins") || "{}");
+        savedPins[newMb.id] = pin;
+        localStorage.setItem("iago_motoboys_pins", JSON.stringify(savedPins));
+      } catch (e) {}
+
+      nameInp.value = "";
+      phoneInp.value = "";
+      pinInp.value = "";
+      toggleNewMotoboyForm(false);
+
+      renderWhatsAppModalRows();
+      renderMotoboyFleet();
+      drawPelotasMap();
+      showToast(`✅ Entregador ${nome} cadastrado! Senha de acesso: ${pin}`);
+    }
+
     function updateMotoboyPhone(id, phone) {
       const mb = getMotoboyById(id);
       if (mb) mb.whatsapp = phone.trim();
@@ -1939,11 +2084,19 @@
       renderMotoboyFleet();
     }
 
+    function updateMotoboyPin(id, pin) {
+      const mb = getMotoboyById(id);
+      if (mb) mb.pin = pin.trim();
+      const mapPins = {};
+      motoboys.forEach(m => { mapPins[m.id] = m.pin || "1234"; });
+      try { localStorage.setItem("iago_motoboys_pins", JSON.stringify(mapPins)); } catch (e) {}
+    }
+
     function closeWhatsAppConfigModal() {
       const m = document.getElementById("whatsapp-config-modal");
       m.classList.add("hidden");
       m.classList.remove("flex");
-      showToast("✅ Números de WhatsApp salvos!");
+      showToast("✅ Alterações dos entregadores salvas!");
     }
 
     let streetSearchTimer = null;
@@ -2763,16 +2916,46 @@
       const manifestLink = document.getElementById("app-manifest-link");
       if (manifestLink) manifestLink.setAttribute("href", "manifest-motoboy.json");
 
-      // CREDENCIAIS DOS 7 MOTOBOYS DA EMPRESA
-      const MOTO_CREDENTIALS = [
-        { id: "MOTO-01", nome: "Junior", user: "junior", pin: "1111", cor: "#10b981", tecla: "1" },
-        { id: "MOTO-02", nome: "Adrian", user: "adrian", pin: "2222", cor: "#38bdf8", tecla: "2" },
-        { id: "MOTO-03", nome: "Naldo", user: "naldo", pin: "3333", cor: "#a855f7", tecla: "3" },
-        { id: "MOTO-04", nome: "David", user: "david", pin: "4444", cor: "#f43f5e", tecla: "4" },
-        { id: "MOTO-05", nome: "Alvaro", user: "alvaro", pin: "5555", cor: "#eab308", tecla: "5" },
-        { id: "MOTO-06", nome: "Diego", user: "diego", pin: "6666", cor: "#06b6d4", tecla: "6" },
-        { id: "MOTO-07", nome: "Christofer", user: "christofer", pin: "7777", cor: "#ec4899", tecla: "7" }
-      ];
+      // CREDENCIAIS DOS MOTOBOYS (BASE + CADASTRADOS RECENTEMENTE NO PAINEL)
+      function getAppMotoboyCredentials() {
+        let creds = [
+          { id: "MOTO-01", nome: "Junior", user: "junior", pin: "1111", cor: "#10b981", tecla: "1" },
+          { id: "MOTO-02", nome: "Adrian", user: "adrian", pin: "2222", cor: "#38bdf8", tecla: "2" },
+          { id: "MOTO-03", nome: "Naldo", user: "naldo", pin: "3333", cor: "#a855f7", tecla: "3" },
+          { id: "MOTO-04", nome: "David", user: "david", pin: "4444", cor: "#f43f5e", tecla: "4" },
+          { id: "MOTO-05", nome: "Alvaro", user: "alvaro", pin: "5555", cor: "#eab308", tecla: "5" },
+          { id: "MOTO-06", nome: "Diego", user: "diego", pin: "6666", cor: "#06b6d4", tecla: "6" },
+          { id: "MOTO-07", nome: "Christofer", user: "christofer", pin: "7777", cor: "#ec4899", tecla: "7" }
+        ];
+        try {
+          const savedCustom = JSON.parse(localStorage.getItem("iago_custom_motoboys_v3") || "[]");
+          if (Array.isArray(savedCustom)) {
+            savedCustom.forEach(c => {
+              const ex = creds.find(x => x.id === c.id || x.nome.toLowerCase() === c.nome.toLowerCase());
+              if (!ex) {
+                creds.push({
+                  id: c.id,
+                  nome: c.nome,
+                  user: c.username || c.nome.toLowerCase(),
+                  pin: c.pin || "1234",
+                  cor: c.cor || "#10b981",
+                  tecla: c.tecla || ""
+                });
+              } else {
+                if (c.pin) ex.pin = c.pin;
+                if (c.nome) ex.nome = c.nome;
+              }
+            });
+          }
+          const savedPins = JSON.parse(localStorage.getItem("iago_motoboys_pins") || "{}");
+          creds.forEach(m => {
+            if (savedPins[m.id]) m.pin = savedPins[m.id];
+          });
+        } catch (e) {}
+        return creds;
+      }
+
+      let MOTO_CREDENTIALS = getAppMotoboyCredentials();
 
       // SESSÃO DE AUTENTICAÇÃO DO MOTOBOY
       let loggedMotoId = localStorage.getItem("iago_logged_motoboy_id");
@@ -2835,39 +3018,46 @@
                   : ``
               }
 
-              <!-- FORMULÁRIO DE LOGIN -->
+              <!-- FORMULÁRIO DE LOGIN COM NOME E SENHA DE ACESSO -->
               <div class="space-y-3.5">
                 <div>
-                  <label class="block text-[11px] font-bold uppercase text-zinc-300 mb-1.5">
-                    🏍️ Escolha seu Nome:
+                  <label class="block text-[11px] font-bold uppercase text-zinc-300 mb-1.5 flex items-center justify-between">
+                    <span>🏍️ Nome do Entregador:</span>
+                    <button type="button" onclick="window.toggleCustomLoginName()" id="btn-toggle-custom-name" class="text-amber-400 text-[10px] hover:underline cursor-pointer">
+                      Digitar outro nome
+                    </button>
                   </label>
-                  <select id="login-moto-id" class="w-full bg-[#09090b] text-white font-bold text-sm px-3.5 py-3 rounded-xl border border-zinc-700 focus:border-amber-400 focus:outline-none">
+                  <select id="login-moto-select" class="w-full bg-[#09090b] text-white font-bold text-sm px-3.5 py-3 rounded-xl border border-zinc-700 focus:border-amber-400 focus:outline-none cursor-pointer">
                     ${MOTO_CREDENTIALS.map(m => `
-                      <option value="${m.id}" ${m.id === (urlMotoId || "MOTO-02") ? "selected" : ""}>
+                      <option value="${m.nome}" ${m.id === (urlMotoId || "MOTO-02") || m.nome.toLowerCase() === (urlNome || "").toLowerCase() ? "selected" : ""}>
                         🏍️ ${m.nome}
                       </option>
                     `).join("")}
                   </select>
+                  <input
+                    id="login-moto-name-input"
+                    type="text"
+                    placeholder="Digite seu nome cadastrado..."
+                    class="hidden mt-1.5 w-full bg-[#09090b] text-white font-bold text-sm px-3.5 py-3 rounded-xl border border-zinc-700 focus:border-amber-400 focus:outline-none"
+                  />
                 </div>
 
                 <div>
                   <label class="block text-[11px] font-bold uppercase text-zinc-300 mb-1.5">
-                    🔒 Digite seu PIN de Acesso (4 dígitos):
+                    🔒 Senha de Acesso:
                   </label>
                   <input
                     id="login-moto-pin"
                     type="password"
-                    inputmode="numeric"
-                    maxlength="6"
-                    placeholder="••••"
-                    onkeydown="if(event.key==='Enter') document.getElementById('btn-entrar-app').click()"
-                    class="w-full bg-[#09090b] text-center text-2xl tracking-widest text-white font-black px-3.5 py-3 rounded-xl border border-zinc-700 focus:border-amber-400 focus:outline-none"
+                    placeholder="Digite sua senha de acesso..."
+                    onkeydown="if(event.key==='Enter') window.handleLoginSubmit()"
+                    class="w-full bg-[#09090b] text-center text-xl tracking-wider text-white font-black px-3.5 py-3 rounded-xl border border-zinc-700 focus:border-amber-400 focus:outline-none"
                   />
                 </div>
 
                 <button
                   id="btn-entrar-app"
-                  onclick="window.submitMotoboyLogin(document.getElementById('login-moto-id').value, document.getElementById('login-moto-pin').value)"
+                  onclick="window.handleLoginSubmit()"
                   class="w-full py-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-black text-sm uppercase shadow-2xl cursor-pointer transition">
                   🚀 ENTRAR NO APLICATIVO
                 </button>
