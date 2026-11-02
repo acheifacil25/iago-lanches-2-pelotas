@@ -179,10 +179,9 @@
           </h2>
           <p class="text-[10px] text-zinc-400">Leitora de comanda + envio ao Motoboy</p>
         </div>
-        <label class="flex items-center gap-1 text-[10px] font-bold text-zinc-300 cursor-pointer" title="Abre automaticamente o WhatsApp do motoboy ao despachar">
-          <input id="auto-whatsapp-toggle" type="checkbox" checked class="accent-zinc-300 w-3.5 h-3.5" />
-          Auto-Whats
-        </label>
+        <div class="flex items-center gap-1.5 text-[10px] font-bold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-500/40" title="Transmissão instantânea em nuvem para o aplicativo do motoboy">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> App Motoboy Ao Vivo
+        </div>
       </div>
 
       <div class="flex-1 overflow-y-auto p-2.5 space-y-2.5">
@@ -1410,59 +1409,61 @@
       renderMotoboyFleet();
       renderWhatsAppPreviewBox();
 
-      const autoOpenWa = document.getElementById("auto-whatsapp-toggle").checked;
-      if (autoOpenWa) {
-        window.open(waData.waUrl, "_blank");
-      }
-
-      showToast(`🔫 COMANDA #${order.ticket} BIPADA PARA ${mb.nome.toUpperCase()}! Despachado no Facity e enviado p/ WhatsApp!`);
+      // Não abre WhatsApp: todas as informações são transmitidas em tempo real diretamente para o App do Motoboy
+      showToast(`🚀 COMANDA #${order.ticket} BIPADA PARA ${mb.nome.toUpperCase()}! Enviado diretamente para o App do Motoboy!`);
     }
 
     function renderWhatsAppPreviewBox() {
       const box = document.getElementById("whatsapp-dispatch-preview-box");
+      if (!box) return;
+      const mb = getMotoboyById(activeMotoboyId);
+      const cur = orders.find(o => o.id === selectedOrderId) || orders[0];
+
       if (!lastWhatsAppDispatch) {
-        const mb = getMotoboyById(activeMotoboyId);
-        const cur = orders.find(o => o.id === selectedOrderId) || orders[0];
-        const preview = cur ? buildWhatsAppPayload(cur, mb) : null;
         box.innerHTML = `
           <div class="flex items-center justify-between mb-1.5">
-            <span class="text-[10px] font-black uppercase text-emerald-400">📲 Prévia do WhatsApp p/ ${mb.nome}</span>
+            <span class="text-[10px] font-black uppercase text-emerald-400 flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              📲 Transmissão ao App de ${mb.nome}
+            </span>
             <span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-500/30">Pronto p/ Bipar</span>
           </div>
-          ${
-            cur
-              ? `<div class="p-2 rounded-lg bg-black/70 border border-emerald-500/30 text-[10px] font-mono text-zinc-200 whitespace-pre-line leading-relaxed max-h-40 overflow-y-auto">${preview.rawText}</div>
-                 <div class="mt-2 grid grid-cols-2 gap-1.5">
-                   <button onclick="beepAndSendWhatsApp(orders.find(x=>x.id==='${cur.id}'), getMotoboyById('${mb.id}'))"
-                           class="py-2 px-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-black text-[10px] uppercase cursor-pointer">
-                     🔫 Bipar &amp; Mandar WhatsApp
-                   </button>
-                   <a href="${preview.gmapsUrl}" target="_blank"
-                      class="py-2 px-2.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 font-black text-[10px] uppercase text-center">
-                     🗺️ Ver Rota Maps
-                   </a>
-                 </div>`
-              : `<div class="text-xs text-zinc-400">Selecione um pedido na fila.</div>`
-          }
+          <div class="p-2 rounded-lg bg-[#09090b] border border-zinc-800 text-[11px] text-zinc-300 space-y-1">
+            <div class="text-zinc-400 text-[10px]">Todas as informações vão direto para a tela e mapa do motoboy:</div>
+            ${cur ? `<div class="font-bold text-white">Comanda #${cur.ticket} — ${cur.cliente} (${cur.endereco})</div>` : '<div>Selecione um pedido na fila</div>'}
+          </div>
+          ${cur ? `
+            <button onclick="beepAndSendWhatsApp(orders.find(x=>x.id==='${cur.id}'), getMotoboyById('${mb.id}'))"
+                    class="mt-2 w-full py-2 px-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-black text-[10.5px] uppercase cursor-pointer transition">
+              🚀 Despachar Comanda #${cur.ticket} p/ ${mb.nome}
+            </button>` : ''}
         `;
         return;
       }
 
-      const { order, mb, waData, time } = lastWhatsAppDispatch;
+      const { order, mb: dMb, time } = lastWhatsAppDispatch;
       box.innerHTML = `
         <div class="flex items-center justify-between mb-1.5">
-          <span class="text-[10px] font-black uppercase text-emerald-400">✅ Enviado p/ WhatsApp de ${mb.nome} (${time})</span>
+          <span class="text-[10px] font-black uppercase text-emerald-400 flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+            ✅ Transmitido p/ App de ${dMb.nome} (${time})
+          </span>
           <span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500 text-black font-black">Comanda #${order.ticket}</span>
         </div>
-        <div class="p-2 rounded-lg bg-black/80 border border-emerald-500/40 text-[10px] font-mono text-emerald-100 whitespace-pre-line leading-relaxed max-h-40 overflow-y-auto">${waData.rawText}</div>
-        <div class="mt-2 grid grid-cols-2 gap-1.5">
-          <a href="${waData.waUrl}" target="_blank"
-             class="py-2 px-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-black text-[10px] uppercase text-center shadow">
-            📲 Abrir WhatsApp de ${mb.nome}
-          </a>
+        <div class="p-2.5 rounded-lg bg-black/80 border border-emerald-500/40 text-[11px] text-zinc-200 space-y-1">
+          <div class="font-bold text-white flex items-center justify-between">
+            <span>👤 ${order.cliente}</span>
+            <span class="text-emerald-400 font-mono">R$ ${Number(order.total || 0).toFixed(2).replace('.', ',')}</span>
+          </div>
+          <div class="text-[10px] text-zinc-400">📍 ${order.endereco} — ${order.bairro}</div>
+          <div class="text-[9.5px] text-emerald-300 font-mono pt-1 border-t border-zinc-800/80">
+            📡 Recebido e sincronizado com o mapa do celular do motoboy.
+          </div>
+        </div>
+        <div class="mt-2">
           <button onclick="completeDelivery('${order.id}')"
-                  class="py-2 px-2.5 rounded-lg bg-zinc-800 hover:bg-emerald-600 text-white font-black text-[10px] uppercase cursor-pointer">
-            ✅ Finalizar Entrega
+                  class="w-full py-2 px-2.5 rounded-lg bg-zinc-800 hover:bg-emerald-600 text-white font-black text-[10px] uppercase cursor-pointer transition">
+            ✅ Dar Baixa Manual na Comanda #${order.ticket}
           </button>
         </div>
       `;
@@ -2558,454 +2559,886 @@
       const manifestLink = document.getElementById("app-manifest-link");
       if (manifestLink) manifestLink.setAttribute("href", "manifest-motoboy.json");
 
-      let myMotoId = urlMotoId || localStorage.getItem("iago_my_motoboy_id") || "MOTO-02";
-      if (urlNome) {
-        const matched = motoboys.find(m => m.nome.toLowerCase() === urlNome.toLowerCase());
-        if (matched) myMotoId = matched.id;
-      }
-      localStorage.setItem("iago_my_motoboy_id", myMotoId);
+      // CREDENCIAIS DOS 7 MOTOBOYS DA EMPRESA
+      const MOTO_CREDENTIALS = [
+        { id: "MOTO-01", nome: "Junior", user: "junior", pin: "1111", cor: "#10b981", tecla: "1" },
+        { id: "MOTO-02", nome: "Adrian", user: "adrian", pin: "2222", cor: "#38bdf8", tecla: "2" },
+        { id: "MOTO-03", nome: "Naldo", user: "naldo", pin: "3333", cor: "#a855f7", tecla: "3" },
+        { id: "MOTO-04", nome: "David", user: "david", pin: "4444", cor: "#f43f5e", tecla: "4" },
+        { id: "MOTO-05", nome: "Alvaro", user: "alvaro", pin: "5555", cor: "#eab308", tecla: "5" },
+        { id: "MOTO-06", nome: "Diego", user: "diego", pin: "6666", cor: "#06b6d4", tecla: "6" },
+        { id: "MOTO-07", nome: "Christofer", user: "christofer", pin: "7777", cor: "#ec4899", tecla: "7" }
+      ];
 
-      function getMyMotoObj() {
-        return motoboys.find(m => m.id === myMotoId) || motoboys[1] || motoboys[0];
-      }
+      // SESSÃO DE AUTENTICAÇÃO DO MOTOBOY
+      let loggedMotoId = localStorage.getItem("iago_logged_motoboy_id");
 
-      let myDeliveries = [];
-      try {
-        myDeliveries = JSON.parse(localStorage.getItem("iago_moto_deliveries_" + myMotoId) || "[]");
-      } catch (e) { myDeliveries = []; }
-
-      function saveMyDeliveries() {
-        try {
-          localStorage.setItem("iago_moto_deliveries_" + myMotoId, JSON.stringify(myDeliveries));
-        } catch (e) {}
-      }
-
-      let finishedMotoTickets = new Set();
-      try {
-        const savedFin = JSON.parse(localStorage.getItem("iago_moto_finished_tickets") || "[]");
-        savedFin.forEach(t => finishedMotoTickets.add(String(t)));
-      } catch (e) {}
-
-      // Se veio pedido direto pelos parâmetros da URL, adiciona imediatamente
-      const urlTicket = params.get("ticket");
-      if (urlTicket) {
-        const cleanTk = String(urlTicket).replace(/^FAC-00/i, "").replace(/\D/g, "") || String(urlTicket);
-        const orderId = params.get("orderId") || `FAC-00${cleanTk}`;
-        const cliente = params.get("cliente") || "Cliente Facity";
-        const endereco = params.get("endereco") || "Pelotas - RS";
-        const bairro = params.get("bairro") || "Pelotas";
-        const total = params.get("total") || "0,00";
-        const pagamento = params.get("pagamento") || "Facity";
-        let itensRaw = params.get("itens");
-        if (!itensRaw) {
-          const localOrd = orders.find(o => o.id === orderId || String(o.ticket) === String(cleanTk));
-          if (localOrd && Array.isArray(localOrd.itens)) itensRaw = localOrd.itens.join(" | ");
+      // Auto-login se veio parâmetros de URL específicos ou se já logado
+      if (!loggedMotoId && urlMotoId) {
+        const found = MOTO_CREDENTIALS.find(m => m.id === urlMotoId);
+        if (found) {
+          // Se for via link direto com motoboy parametrizado, salva sessão
+          loggedMotoId = found.id;
+          localStorage.setItem("iago_logged_motoboy_id", loggedMotoId);
         }
-        const itensList = (itensRaw || "1x Pedido Facity").split("|").map(s => s.trim()).filter(Boolean);
-        const existingIdx = myDeliveries.findIndex(d => String(d.ticket) === String(cleanTk));
-        const delObj = { orderId, ticket: String(cleanTk), cliente, endereco, bairro, total, pagamento, itens: itensList };
-        if (existingIdx >= 0) myDeliveries[existingIdx] = delObj;
-        else myDeliveries.unshift(delObj);
-        saveMyDeliveries();
+      } else if (!loggedMotoId && urlNome) {
+        const found = MOTO_CREDENTIALS.find(m => m.nome.toLowerCase() === urlNome.toLowerCase());
+        if (found) {
+          loggedMotoId = found.id;
+          localStorage.setItem("iago_logged_motoboy_id", loggedMotoId);
+        }
       }
 
-      // Carrega pedidos já despachados para este motoboy na fila da loja
-      orders.forEach(o => {
-        const mb = getMyMotoObj();
-        if (o.status === "EM_ROTA" && (o.motoboyId === myMotoId || (o.motoboyNome && o.motoboyNome.toLowerCase() === mb.nome.toLowerCase()))) {
-          const cleanTk = String(o.ticket).replace(/^FAC-00/i, "").replace(/\D/g, "") || String(o.ticket);
-          if (!finishedMotoTickets.has(cleanTk) && !myDeliveries.some(d => String(d.ticket) === cleanTk)) {
-            myDeliveries.push({
-              orderId: o.id,
-              ticket: cleanTk,
-              cliente: o.cliente || "Cliente",
-              endereco: o.endereco || "Pelotas",
-              bairro: o.bairro || "Pelotas",
-              itens: Array.isArray(o.itens) ? o.itens : [String(o.itens || "1x Pedido Facity")],
-              pagamento: o.pagamento || "Facity",
-              total: Number(o.total || 0).toFixed(2).replace(".", ",")
-            });
-          }
-        }
-      });
-      saveMyDeliveries();
-
-      let selectedTicket = urlTicket || (myDeliveries[0] ? myDeliveries[0].ticket : null);
-      let gpsStatusText = "🛰️ Satélite GPS: Conectando...";
-
-      window.onSelectMotoboyProfile = function(newMotoId) {
-        myMotoId = newMotoId;
-        localStorage.setItem("iago_my_motoboy_id", myMotoId);
-        try {
-          myDeliveries = JSON.parse(localStorage.getItem("iago_moto_deliveries_" + myMotoId) || "[]");
-        } catch (e) { myDeliveries = []; }
-        selectedTicket = myDeliveries[0] ? myDeliveries[0].ticket : null;
-        renderMotoboyAppUI();
-        pollMotoDeliveriesFromCloud();
-        triggerImmediateGpsSend();
+      window.motoboyLogout = function() {
+        localStorage.removeItem("iago_logged_motoboy_id");
+        loggedMotoId = null;
+        renderMotoboyLoginScreen();
       };
 
-      window.onSelectMotoboyTicketTab = function(tk) {
-        selectedTicket = String(tk);
-        renderMotoboyAppUI();
+      window.submitMotoboyLogin = function(selectedId, inputPin) {
+        const cred = MOTO_CREDENTIALS.find(m => m.id === selectedId);
+        if (!cred) {
+          renderMotoboyLoginScreen("⚠️ Selecione um entregador válido.");
+          return;
+        }
+        if (String(inputPin).trim() !== String(cred.pin)) {
+          if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+          renderMotoboyLoginScreen("❌ PIN incorreto! Verifique sua senha de acesso.");
+          return;
+        }
+        loggedMotoId = cred.id;
+        localStorage.setItem("iago_logged_motoboy_id", loggedMotoId);
+        initMotoboySession();
       };
 
-      window.installMotoboyAppOnPhone = async function() {
-        if (deferredPwaPrompt) {
-          deferredPwaPrompt.prompt();
-          await deferredPwaPrompt.userChoice;
-          deferredPwaPrompt = null;
-        } else {
-          alert("Para adicionar na tela inicial:\n• Android (Chrome): Menu ⋮ ➔ 'Instalar aplicativo' ou 'Adicionar à tela inicial'.\n• iPhone (Safari): Compartilhar ➔ 'Adicionar à Tela de Início'.");
-        }
-      };
-
-      window.finishMotoboyDeliveryNow = async function(ticketToFinish) {
-        const cur = myDeliveries.find(d => String(d.ticket) === String(ticketToFinish)) || {
-          orderId: `FAC-00${ticketToFinish}`,
-          ticket: String(ticketToFinish)
-        };
-        const btn = document.getElementById("btn-finish-delivery");
-        if (btn) {
-          btn.textContent = "⏳ DANDO BAIXA NA LOJA...";
-          btn.disabled = true;
-        }
-        const mbObj = getMyMotoObj();
-        const cleanTk = String(cur.ticket).replace(/^FAC-00/i, "").replace(/\D/g, "") || String(cur.ticket);
-        finishedMotoTickets.add(String(cleanTk));
-        try {
-          localStorage.setItem("iago_moto_finished_tickets", JSON.stringify(Array.from(finishedMotoTickets)));
-        } catch (e) {}
-
-        await publishCloudCommand({
-          type: "DELIVERED",
-          orderId: cur.orderId || `FAC-00${cleanTk}`,
-          ticket: String(cleanTk),
-          motoboyId: myMotoId,
-          nome: mbObj.nome,
-          ts: Date.now()
-        });
-
-        myDeliveries = myDeliveries.filter(d => String(d.ticket) !== String(ticketToFinish) && String(d.ticket) !== String(cleanTk));
-        saveMyDeliveries();
-        selectedTicket = myDeliveries[0] ? myDeliveries[0].ticket : null;
-        renderMotoboyAppUI("✅ ENTREGA #" + cleanTk + " CONCLUÍDA! VOCÊ ESTÁ RETORNANDO À LOJA.");
-        triggerImmediateGpsSend();
-      };
-
-      function renderMotoboyAppUI(flashBanner = "") {
-        const mbObj = getMyMotoObj();
-        const cur = myDeliveries.find(d => String(d.ticket) === String(selectedTicket)) || myDeliveries[0] || null;
-        if (cur) selectedTicket = cur.ticket;
-
-        let contentHtml = "";
-        if (!cur) {
-          contentHtml = `
-            <div class="p-6 rounded-2xl bg-[#14141d] border border-zinc-800 text-center space-y-2 my-4">
-              <div class="text-3xl">🏍️</div>
-              <div class="text-sm font-bold uppercase text-zinc-200">Aguardando Próxima Entrega</div>
-              <p class="text-xs text-zinc-400 leading-relaxed">
-                Conectado como <strong>${mbObj.nome}</strong>. Sua localização está ativa na loja.<br/>
-                Quando o caixa despachar uma comanda para você, ela <strong>aparecerá imediatamente aqui</strong>.
-              </p>
-              <div class="mt-3 p-2.5 rounded-xl bg-[#09090b] border border-zinc-800 text-[11px] text-zinc-300 font-mono">
-                ${gpsStatusText}
-              </div>
-            </div>
-          `;
-        } else {
-          const itensList = Array.isArray(cur.itens) ? cur.itens : String(cur.itens || "1x Pedido Facity").split("|");
-          const gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(STORE_BASE.address)}&destination=${encodeURIComponent(cur.endereco + ", " + cur.bairro + ", Pelotas - RS")}&travelmode=driving`;
-          contentHtml = `
-            ${
-              myDeliveries.length > 1
-                ? `<div class="flex items-center gap-1.5 overflow-x-auto pb-1">
-                     ${myDeliveries.map(d => `
-                       <button onclick="window.onSelectMotoboyTicketTab('${d.ticket}')"
-                               class="px-3 py-1.5 rounded-xl font-bold text-xs whitespace-nowrap cursor-pointer ${String(d.ticket) === String(cur.ticket) ? 'bg-zinc-200 text-black shadow' : 'bg-[#181820] text-zinc-300 border border-zinc-700'}">
-                         Comanda #${d.ticket}
-                       </button>
-                     `).join("")}
-                   </div>`
-                : ``
-            }
-
-            <div class="p-4 rounded-2xl bg-[#14141d] border border-zinc-800 space-y-2.5">
-              <div class="flex items-center justify-between border-b border-zinc-800 pb-2">
-                <div>
-                  <div class="text-[11px] text-zinc-400 uppercase font-bold">Cliente &amp; Endereço:</div>
-                  <div class="text-base font-bold text-white mt-0.5">👤 ${cur.cliente}</div>
-                </div>
-                <span class="px-3 py-1 rounded-full bg-zinc-200 text-black font-black text-sm">Comanda #${cur.ticket}</span>
-              </div>
-
-              <div class="text-sm font-bold text-zinc-100">📍 ${cur.endereco} — ${cur.bairro}</div>
-
-              <div class="pt-2.5 border-t border-zinc-800">
-                <div class="text-[11px] text-zinc-400 uppercase font-bold mb-1.5">🍔 Itens do Pedido:</div>
-                <div class="space-y-1">
-                  ${itensList.map(item => `
-                    <div class="px-2.5 py-1.5 rounded-lg bg-[#09090b] border border-zinc-800 text-xs font-medium text-zinc-200">
-                      • ${item}
-                    </div>
-                  `).join("")}
-                </div>
-              </div>
-
-              <div class="pt-2.5 border-t border-zinc-800 flex items-center justify-between">
-                <div>
-                  <div class="text-[10px] text-zinc-400 uppercase">Pagamento:</div>
-                  <div class="text-xs font-bold text-zinc-200">💳 ${cur.pagamento}</div>
-                </div>
-                <div class="text-right">
-                  <div class="text-[10px] text-zinc-400 uppercase">Total:</div>
-                  <div class="text-base font-black text-emerald-400">R$ ${cur.total}</div>
-                </div>
-              </div>
-            </div>
-
-            <div class="text-[10.5px] text-zinc-400 text-center font-mono">
-              ${gpsStatusText}
-            </div>
-
-            <a href="${gmapsUrl}" target="_blank"
-               class="block w-full py-4 px-4 rounded-2xl bg-zinc-200 hover:bg-white text-black font-black text-center text-sm uppercase shadow-xl">
-              🗺️ 1. ABRIR ROTA NO GOOGLE MAPS
-            </a>
-
-            <button id="btn-finish-delivery" onclick="window.finishMotoboyDeliveryNow('${cur.ticket}')"
-                    class="w-full py-5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-center text-base uppercase shadow-2xl cursor-pointer">
-              ✅ 2. JÁ ENTREGUEI O PEDIDO (DAR BAIXA)
-            </button>
-          `;
-        }
-
+      function renderMotoboyLoginScreen(errorMessage = "") {
         document.body.innerHTML = `
-          <div class="min-h-screen bg-[#09090b] text-white p-4 flex flex-col justify-between max-w-md mx-auto">
-            <div class="space-y-3.5">
-              <div class="p-3.5 rounded-2xl bg-[#14141d] border border-zinc-800 space-y-2.5">
-                <div class="flex items-center justify-between gap-2">
-                  <div>
-                    <div class="text-[11px] font-bold uppercase text-zinc-400">🍔 App Motoboy • Iago Lanches 2</div>
-                    <div class="text-xs text-zinc-200">Entregas em tempo real</div>
-                  </div>
-                  <button onclick="window.installMotoboyAppOnPhone()"
-                          class="px-2.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 font-bold text-[11px] uppercase cursor-pointer">
-                    📲 Instalar App
-                  </button>
+          <div class="min-h-screen bg-[#09090b] text-white p-5 flex flex-col justify-center items-center max-w-md mx-auto">
+            <div class="w-full bg-[#131318] border border-zinc-800 rounded-3xl p-6 shadow-2xl space-y-5">
+              
+              <!-- LOGO IL2 -->
+              <div class="text-center space-y-2">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-600 border-4 border-amber-400 shadow-xl text-white font-black text-xl">
+                  IL2
                 </div>
-
-                <div class="flex items-center gap-2 pt-1 border-t border-zinc-800/80">
-                  <span class="text-[11px] font-bold text-zinc-400 whitespace-nowrap">🏍️ Entregador:</span>
-                  <select onchange="window.onSelectMotoboyProfile(this.value)"
-                          class="flex-1 bg-[#09090b] text-zinc-100 font-bold text-xs px-2.5 py-1.5 rounded-xl border border-zinc-700">
-                    ${motoboys.map(m => `
-                      <option value="${m.id}" ${m.id === myMotoId ? 'selected' : ''}>🏍️ ${m.nome}</option>
-                    `).join("")}
-                  </select>
-                </div>
+                <h1 class="text-lg font-black uppercase text-white tracking-wide">Iago Lanches 2</h1>
+                <p class="text-xs text-zinc-400">Aplicativo do Entregador • Pelotas/RS</p>
               </div>
 
               ${
-                flashBanner
-                  ? `<div class="p-3 rounded-xl bg-emerald-950/90 border border-emerald-500 text-emerald-300 text-xs font-bold text-center">${flashBanner}</div>`
+                errorMessage
+                  ? `<div class="p-3 rounded-xl bg-rose-950/80 border border-rose-500 text-rose-300 text-xs font-bold text-center">${errorMessage}</div>`
                   : ``
               }
 
-              ${contentHtml}
+              <!-- FORMULÁRIO DE LOGIN -->
+              <div class="space-y-3.5">
+                <div>
+                  <label class="block text-[11px] font-bold uppercase text-zinc-300 mb-1.5">
+                    🏍️ Escolha seu Nome:
+                  </label>
+                  <select id="login-moto-id" class="w-full bg-[#09090b] text-white font-bold text-sm px-3.5 py-3 rounded-xl border border-zinc-700 focus:border-amber-400 focus:outline-none">
+                    ${MOTO_CREDENTIALS.map(m => `
+                      <option value="${m.id}" ${m.id === (urlMotoId || "MOTO-02") ? "selected" : ""}>
+                        🏍️ ${m.nome}
+                      </option>
+                    `).join("")}
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block text-[11px] font-bold uppercase text-zinc-300 mb-1.5">
+                    🔒 Digite seu PIN de Acesso (4 dígitos):
+                  </label>
+                  <input
+                    id="login-moto-pin"
+                    type="password"
+                    inputmode="numeric"
+                    maxlength="6"
+                    placeholder="••••"
+                    onkeydown="if(event.key==='Enter') document.getElementById('btn-entrar-app').click()"
+                    class="w-full bg-[#09090b] text-center text-2xl tracking-widest text-white font-black px-3.5 py-3 rounded-xl border border-zinc-700 focus:border-amber-400 focus:outline-none"
+                  />
+                </div>
+
+                <button
+                  id="btn-entrar-app"
+                  onclick="window.submitMotoboyLogin(document.getElementById('login-moto-id').value, document.getElementById('login-moto-pin').value)"
+                  class="w-full py-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-black text-sm uppercase shadow-2xl cursor-pointer transition">
+                  🚀 ENTRAR NO APLICATIVO
+                </button>
+              </div>
+
+              <!-- DICA DOS PINS CADASTRADOS -->
+              <div class="pt-3 border-t border-zinc-800 text-center">
+                <div class="text-[10px] text-zinc-500 uppercase font-bold mb-1">PINs de Acesso da Equipe:</div>
+                <div class="text-[10px] text-zinc-400 font-mono">
+                  Adrian (2222) • Junior (1111) • Naldo (3333)<br/>
+                  David (4444) • Alvaro (5555) • Diego (6666) • Christofer (7777)
+                </div>
+              </div>
+
             </div>
 
-            <div class="text-center text-[11px] text-zinc-500 pt-6">
-              Iago Lanches 2 • Av. Fernando Osório, 2870 — Pelotas/RS
+            <div class="text-center text-[10.5px] text-zinc-500 pt-6">
+              Av. Fernando Osório, 2870 — Três Vendas, Pelotas/RS
             </div>
           </div>
         `;
+        setTimeout(() => {
+          const pinInput = document.getElementById("login-moto-pin");
+          if (pinInput) pinInput.focus();
+        }, 150);
       }
 
-      function handleMotoIncomingDispatch(payload) {
-        if (!payload) return;
+      // Se não estiver logado, exibe a tela de login e encerra
+      if (!loggedMotoId) {
+        renderMotoboyLoginScreen();
+        return true;
+      }
 
-        // Se o operador resetou o expediente do dia
-        if (payload.type === "RESET_DAY") {
-          finishedMotoTickets.clear();
-          myDeliveries = [];
+      function initMotoboySession() {
+        let myMotoId = loggedMotoId;
+        const mbObj = MOTO_CREDENTIALS.find(m => m.id === myMotoId) || MOTO_CREDENTIALS[1];
+
+        let myDeliveries = [];
+        try {
+          myDeliveries = JSON.parse(localStorage.getItem("iago_moto_deliveries_" + myMotoId) || "[]");
+        } catch (e) { myDeliveries = []; }
+
+        function saveMyDeliveries() {
           try {
-            localStorage.setItem("iago_moto_finished_tickets", JSON.stringify([]));
-            localStorage.setItem("iago_moto_deliveries_" + myMotoId, JSON.stringify([]));
+            localStorage.setItem("iago_moto_deliveries_" + myMotoId, JSON.stringify(myDeliveries));
           } catch (e) {}
-          selectedTicket = null;
-          renderMotoboyAppUI("🔄 Expediente resetado pela loja. Pronto para novos pedidos!");
-          return;
         }
 
-        if (payload.type !== "DISPATCH") return;
-
-        // Casamento flexível por ID ("MOTO-02", "2") ou por NOME ("Adrian")
-        const mbObj = getMyMotoObj();
-        const pId = String(payload.motoboyId || "").trim().toLowerCase();
-        const cId = String(myMotoId || "").trim().toLowerCase();
-        const pNome = String(payload.nome || "").trim().toLowerCase();
-        const cNome = String(mbObj.nome || "").trim().toLowerCase();
-
-        const isMatch = (pId && cId && (pId === cId || pId.replace(/\D/g, "") === cId.replace(/\D/g, ""))) ||
-                        (pNome && cNome && (pNome === cNome || pNome.includes(cNome) || cNome.includes(pNome)));
-
-        if (!isMatch) return;
-
-        const cleanTk = String(payload.ticket || "").replace(/^FAC-00/i, "").replace(/\D/g, "") || String(payload.ticket);
-
-        // Se o operador despachou agora, DESBLOQUEIA a comanda mesmo que tenha sido concluída em teste anterior!
-        finishedMotoTickets.delete(cleanTk);
+        let finishedMotoTickets = new Set();
         try {
-          localStorage.setItem("iago_moto_finished_tickets", JSON.stringify(Array.from(finishedMotoTickets)));
+          const savedFin = JSON.parse(localStorage.getItem("iago_moto_finished_tickets") || "[]");
+          savedFin.forEach(t => finishedMotoTickets.add(String(t)));
         } catch (e) {}
 
-        const newDel = {
-          orderId: payload.orderId || `FAC-00${cleanTk}`,
-          ticket: String(cleanTk),
-          cliente: payload.cliente || "Cliente",
-          endereco: payload.endereco || "Pelotas",
-          bairro: payload.bairro || "Pelotas",
-          itens: Array.isArray(payload.itens) ? payload.itens : [String(payload.itens || "1x Pedido Facity")],
-          pagamento: payload.pagamento || "Facity",
-          total: payload.total || "0,00"
-        };
+        // Carrega pedidos da URL se existirem
+        const urlTicket = params.get("ticket");
+        if (urlTicket) {
+          const cleanTk = String(urlTicket).replace(/^FAC-00/i, "").replace(/\D/g, "") || String(urlTicket);
+          const orderId = params.get("orderId") || `FAC-00${cleanTk}`;
+          const cliente = params.get("cliente") || "Cliente Facity";
+          const endereco = params.get("endereco") || "Pelotas - RS";
+          const bairro = params.get("bairro") || "Pelotas";
+          const total = params.get("total") || "0,00";
+          const pagamento = params.get("pagamento") || "Facity";
+          let itensRaw = params.get("itens");
+          if (!itensRaw) {
+            const localOrd = orders.find(o => o.id === orderId || String(o.ticket) === String(cleanTk));
+            if (localOrd && Array.isArray(localOrd.itens)) itensRaw = localOrd.itens.join(" | ");
+          }
+          const itensList = (itensRaw || "1x Pedido Facity").split("|").map(s => s.trim()).filter(Boolean);
+          const existingIdx = myDeliveries.findIndex(d => String(d.ticket) === String(cleanTk));
+          const delObj = { orderId, ticket: String(cleanTk), cliente, endereco, bairro, total, pagamento, itens: itensList };
+          if (existingIdx >= 0) myDeliveries[existingIdx] = delObj;
+          else myDeliveries.unshift(delObj);
+          saveMyDeliveries();
+        }
 
-        const idx = myDeliveries.findIndex(d => String(d.ticket) === String(newDel.ticket));
-        const isNew = idx === -1;
-        if (idx >= 0) myDeliveries[idx] = newDel;
-        else myDeliveries.unshift(newDel);
+        // Carrega pedidos já despachados para este motoboy na fila da loja
+        orders.forEach(o => {
+          if (o.status === "EM_ROTA" && (o.motoboyId === myMotoId || (o.motoboyNome && o.motoboyNome.toLowerCase() === mbObj.nome.toLowerCase()))) {
+            const cleanTk = String(o.ticket).replace(/^FAC-00/i, "").replace(/\D/g, "") || String(o.ticket);
+            if (!finishedMotoTickets.has(cleanTk) && !myDeliveries.some(d => String(d.ticket) === cleanTk)) {
+              myDeliveries.push({
+                orderId: o.id,
+                ticket: cleanTk,
+                cliente: o.cliente || "Cliente",
+                endereco: o.endereco || "Pelotas",
+                bairro: o.bairro || "Pelotas",
+                itens: Array.isArray(o.itens) ? o.itens : [String(o.itens || "1x Pedido Facity")],
+                pagamento: o.pagamento || "Facity",
+                total: Number(o.total || 0).toFixed(2).replace(".", ",")
+              });
+            }
+          }
+        });
         saveMyDeliveries();
 
-        selectedTicket = newDel.ticket;
-        if (navigator.vibrate) navigator.vibrate([250, 100, 250, 100, 300]);
-        renderMotoboyAppUI(`🔔 NOVA ENTREGA RECEBIDA: COMANDA #${newDel.ticket}!`);
-      }
+        let selectedTicket = urlTicket || (myDeliveries[0] ? myDeliveries[0].ticket : null);
+        let gpsStatusText = "🛰️ Satélite GPS: Conectando...";
+        let lastCoords = null;
+        let lastGpsSentAt = 0;
 
-      async function pollMotoDeliveriesFromCloud() {
-        for (const topic of [NTFY_CMD_TOPIC, NTFY_TOPIC]) {
-          try {
-            // Consulta sem poll=1 para não travar a requisição HTTP!
-            const resp = await fetch(`https://ntfy.sh/${topic}/json?since=1h`, { cache: "no-store" });
-            if (!resp.ok) continue;
-            const text = await resp.text();
-            const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
-            for (const line of lines) {
-              try {
-                const outer = JSON.parse(line);
-                if (outer && outer.event === "message" && outer.message) {
-                  const payload = JSON.parse(outer.message);
-                  if (payload.type === "DISPATCH" || payload.type === "RESET_DAY") {
-                    handleMotoIncomingDispatch(payload);
-                  }
-                }
-              } catch (e) {}
-            }
-          } catch (err) {}
-        }
-      }
-
-      renderMotoboyAppUI();
-
-      // Escuta entregas na nuvem via SSE e canais locais
-      if (localSyncChannel) {
-        localSyncChannel.onmessage = e => {
-          if (e && e.data) handleMotoIncomingDispatch(e.data);
+        // ESTADO DO MAPA DO MOTOBOY (CONECTADO AO GOOGLE MAPS)
+        let motoMapState = {
+          centerLat: STORE_BASE.lat,
+          centerLng: STORE_BASE.lng,
+          zoomLevel: 15,
+          isHybrid: false,
+          isDragging: false,
+          lastX: 0,
+          lastY: 0,
+          autoFollow: true
         };
-      }
-      window.addEventListener("storage", e => {
-        if (e.key === "iago_last_cloud_cmd" && e.newValue) {
-          try {
-            handleMotoIncomingDispatch(JSON.parse(e.newValue));
-          } catch (err) {}
-        }
-      });
 
-      [NTFY_CMD_TOPIC, NTFY_TOPIC].forEach(topic => {
-        try {
-          const esMoto = new EventSource(`https://ntfy.sh/${topic}/sse`);
-          esMoto.onmessage = evt => {
-            try {
-              const outer = JSON.parse(evt.data);
-              if (!outer || !outer.message) return;
-              const payload = JSON.parse(outer.message);
-              handleMotoIncomingDispatch(payload);
-            } catch (err) {}
+        window.onSelectMotoboyTicketTab = function(tk) {
+          selectedTicket = String(tk);
+          renderMotoboyAppUI();
+        };
+
+        window.installMotoboyAppOnPhone = async function() {
+          if (deferredPwaPrompt) {
+            deferredPwaPrompt.prompt();
+            await deferredPwaPrompt.userChoice;
+            deferredPwaPrompt = null;
+          } else {
+            alert("Para instalar na tela inicial:\n• Android (Chrome): Menu ⋮ ➔ 'Instalar aplicativo' ou 'Adicionar à tela inicial'.\n• iPhone (Safari): Compartilhar ➔ 'Adicionar à Tela de Início'.");
+          }
+        };
+
+        // BOTÃO REDONDO "✓" JÁ ENTREGUEI (DAR BAIXA)
+        window.finishMotoboyDeliveryNow = async function(ticketToFinish) {
+          const cur = myDeliveries.find(d => String(d.ticket) === String(ticketToFinish)) || {
+            orderId: `FAC-00${ticketToFinish}`,
+            ticket: String(ticketToFinish)
           };
-        } catch (e) {}
-      });
-      pollMotoDeliveriesFromCloud();
-      setInterval(pollMotoDeliveriesFromCloud, 3000);
+          const btn = document.getElementById("btn-finish-delivery");
+          if (btn) {
+            btn.innerHTML = `<span class="animate-spin text-xl">⏳</span>`;
+            btn.disabled = true;
+          }
+          const cleanTk = String(cur.ticket).replace(/^FAC-00/i, "").replace(/\D/g, "") || String(cur.ticket);
+          finishedMotoTickets.add(String(cleanTk));
+          try {
+            localStorage.setItem("iago_moto_finished_tickets", JSON.stringify(Array.from(finishedMotoTickets)));
+          } catch (e) {}
 
-      // Envia a geolocalização ao vivo (SATÉLITE REAL DE ALTA PRECISÃO)
-      let lastCoords = null;
-      let lastGpsSentAt = 0;
+          await publishCloudCommand({
+            type: "DELIVERED",
+            orderId: cur.orderId || `FAC-00${cleanTk}`,
+            ticket: String(cleanTk),
+            motoboyId: myMotoId,
+            nome: mbObj.nome,
+            ts: Date.now()
+          });
 
-      async function sendLiveGpsPayload(lat, lng, accuracy = 0) {
-        if (!isValidPelotasCoords(lat, lng)) {
-          gpsStatusText = `⚠️ Sinal GPS fora de Pelotas (${lat.toFixed(4)}, ${lng.toFixed(4)}). Ative o GPS de Alta Precisão!`;
-          return;
+          myDeliveries = myDeliveries.filter(d => String(d.ticket) !== String(ticketToFinish) && String(d.ticket) !== String(cleanTk));
+          saveMyDeliveries();
+          selectedTicket = myDeliveries[0] ? myDeliveries[0].ticket : null;
+          if (navigator.vibrate) navigator.vibrate([150, 100, 150]);
+          renderMotoboyAppUI("✅ ENTREGA #" + cleanTk + " CONCLUÍDA! VOCÊ ESTÁ RETORNANDO À LOJA.");
+          triggerImmediateGpsSend();
+        };
+
+        // CONTROLES DO MAPA DO MOTOBOY
+        window.motoZoomIn = function() {
+          motoMapState.zoomLevel = Math.min(18, motoMapState.zoomLevel + 1);
+          drawMotoboyMap();
+        };
+
+        window.motoZoomOut = function() {
+          motoMapState.zoomLevel = Math.max(12, motoMapState.zoomLevel - 1);
+          drawMotoboyMap();
+        };
+
+        window.motoToggleLayer = function() {
+          motoMapState.isHybrid = !motoMapState.isHybrid;
+          drawMotoboyMap();
+        };
+
+        window.motoRecenter = function() {
+          motoMapState.autoFollow = true;
+          if (lastCoords) {
+            motoMapState.centerLat = lastCoords.lat;
+            motoMapState.centerLng = lastCoords.lng;
+          } else {
+            motoMapState.centerLat = STORE_BASE.lat;
+            motoMapState.centerLng = STORE_BASE.lng;
+          }
+          motoMapState.zoomLevel = 16;
+          drawMotoboyMap();
+        };
+
+        function drawMotoboyMap() {
+          const cv = document.getElementById("moto-map-canvas");
+          if (!cv) return;
+          const ctxM = cv.getContext("2d");
+          const rect = cv.getBoundingClientRect();
+          const w = rect.width;
+          const h = rect.height;
+          if (!w || !h) return;
+
+          cv.width = w * window.devicePixelRatio;
+          cv.height = h * window.devicePixelRatio;
+          ctxM.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+
+          const isHybrid = motoMapState.isHybrid;
+          const lyrs = isHybrid ? "y" : "m";
+          const z = Math.round(motoMapState.zoomLevel);
+
+          ctxM.fillStyle = isHybrid ? "#142218" : "#f1f3f4";
+          ctxM.fillRect(0, 0, w, h);
+
+          const centerWorld = latLngToWorldPixel(motoMapState.centerLat, motoMapState.centerLng, z);
+          const startTileX = Math.floor((centerWorld.x - w / 2) / 256);
+          const endTileX = Math.floor((centerWorld.x + w / 2) / 256);
+          const startTileY = Math.floor((centerWorld.y - h / 2) / 256);
+          const endTileY = Math.floor((centerWorld.y + h / 2) / 256);
+
+          // 1. DESENHA TILES DO GOOGLE MAPS
+          for (let tx = startTileX; tx <= endTileX; tx++) {
+            for (let ty = startTileY; ty <= endTileY; ty++) {
+              const tileImg = getGoogleTileImage(lyrs, z, tx, ty);
+              if (tileImg && tileImg.loaded) {
+                const screenX = Math.round(w / 2 + (tx * 256 - centerWorld.x));
+                const screenY = Math.round(h / 2 + (ty * 256 - centerWorld.y));
+                ctxM.drawImage(tileImg, screenX, screenY, 256, 256);
+              }
+            }
+          }
+
+          function toScreen(lat, lng) {
+            const pt = latLngToWorldPixel(lat, lng, z);
+            return {
+              x: w / 2 + (pt.x - centerWorld.x),
+              y: h / 2 + (pt.y - centerWorld.y)
+            };
+          }
+
+          const basePos = toScreen(STORE_BASE.lat, STORE_BASE.lng);
+          const cur = myDeliveries.find(d => String(d.ticket) === String(selectedTicket)) || myDeliveries[0] || null;
+
+          // Posição de destino do cliente
+          let destLat = null;
+          let destLng = null;
+          if (cur) {
+            const foundOrd = orders.find(o => String(o.ticket) === String(cur.ticket) || o.id === cur.orderId);
+            if (foundOrd && foundOrd.lat && foundOrd.lng) {
+              destLat = foundOrd.lat;
+              destLng = foundOrd.lng;
+            } else {
+              destLat = -31.725149;
+              destLng = -52.346509;
+            }
+          }
+
+          // Posição atual do motoboy
+          const myLat = (lastCoords && lastCoords.lat) ? lastCoords.lat : STORE_BASE.lat;
+          const myLng = (lastCoords && lastCoords.lng) ? lastCoords.lng : STORE_BASE.lng;
+          const motoPos = toScreen(myLat, myLng);
+
+          // 2. DESENHA LINHA DE ROTA DO GOOGLE MAPS
+          if (cur && destLat && destLng) {
+            const destPos = toScreen(destLat, destLng);
+
+            // Sombra da linha da rota
+            ctxM.beginPath();
+            ctxM.moveTo(motoPos.x, motoPos.y);
+            ctxM.lineTo(destPos.x, destPos.y);
+            ctxM.strokeStyle = "rgba(0, 0, 0, 0.35)";
+            ctxM.lineWidth = 6;
+            ctxM.stroke();
+
+            // Linha da rota azul Google Maps
+            ctxM.beginPath();
+            ctxM.moveTo(motoPos.x, motoPos.y);
+            ctxM.lineTo(destPos.x, destPos.y);
+            ctxM.strokeStyle = "#1a73e8";
+            ctxM.lineWidth = 4;
+            ctxM.stroke();
+          } else {
+            // Se está retornando à base (sem entrega ativa)
+            ctxM.beginPath();
+            ctxM.setLineDash([5, 5]);
+            ctxM.moveTo(motoPos.x, motoPos.y);
+            ctxM.lineTo(basePos.x, basePos.y);
+            ctxM.strokeStyle = "#10b981";
+            ctxM.lineWidth = 2.5;
+            ctxM.stroke();
+            ctxM.setLineDash([]);
+          }
+
+          // 3. PINO DA LOJA IL2
+          ctxM.beginPath();
+          ctxM.arc(basePos.x, basePos.y, 11, 0, Math.PI * 2);
+          ctxM.fillStyle = "#e63946";
+          ctxM.fill();
+          ctxM.lineWidth = 2.5;
+          ctxM.strokeStyle = "#d4af37";
+          ctxM.stroke();
+
+          ctxM.fillStyle = "#ffffff";
+          ctxM.font = "900 8.5px Roboto, sans-serif";
+          ctxM.textAlign = "center";
+          ctxM.textBaseline = "middle";
+          ctxM.fillText("IL2", basePos.x, basePos.y);
+
+          // 4. PINO DO CLIENTE (SE HOUVER PEDIDO)
+          if (cur && destLat && destLng) {
+            const destPos = toScreen(destLat, destLng);
+
+            // Halo pulsante
+            ctxM.beginPath();
+            ctxM.arc(destPos.x, destPos.y, 16, 0, Math.PI * 2);
+            ctxM.fillStyle = "rgba(239, 68, 68, 0.3)";
+            ctxM.fill();
+
+            // Marcador
+            ctxM.beginPath();
+            ctxM.arc(destPos.x, destPos.y, 10, 0, Math.PI * 2);
+            ctxM.fillStyle = "#dc2626";
+            ctxM.fill();
+            ctxM.lineWidth = 2;
+            ctxM.strokeStyle = "#ffffff";
+            ctxM.stroke();
+
+            ctxM.fillStyle = "#ffffff";
+            ctxM.font = "900 9px sans-serif";
+            ctxM.textAlign = "center";
+            ctxM.textBaseline = "middle";
+            ctxM.fillText(`#${cur.ticket}`, destPos.x, destPos.y);
+
+            // Etiqueta com nome do cliente
+            const clientLabel = `👤 ${cur.cliente.slice(0, 14)}`;
+            ctxM.font = "bold 9px Roboto, sans-serif";
+            const clW = ctxM.measureText(clientLabel).width;
+            ctxM.fillStyle = "rgba(9, 9, 11, 0.85)";
+            ctxM.fillRect(destPos.x - clW / 2 - 3, destPos.y - 23, clW + 6, 12);
+            ctxM.fillStyle = "#ffffff";
+            ctxM.fillText(clientLabel, destPos.x, destPos.y - 14);
+          }
+
+          // 5. PINO DA MOTO DO ENTREGADOR (VOCÊ)
+          ctxM.beginPath();
+          ctxM.arc(motoPos.x, motoPos.y, 16, 0, Math.PI * 2);
+          ctxM.fillStyle = `${mbObj.cor}44`;
+          ctxM.fill();
+
+          ctxM.beginPath();
+          ctxM.arc(motoPos.x, motoPos.y, 11, 0, Math.PI * 2);
+          ctxM.fillStyle = "#09090b";
+          ctxM.fill();
+          ctxM.lineWidth = 2.5;
+          ctxM.strokeStyle = mbObj.cor;
+          ctxM.stroke();
+
+          ctxM.fillStyle = "#ffffff";
+          ctxM.font = "bold 10px sans-serif";
+          ctxM.textAlign = "center";
+          ctxM.textBaseline = "middle";
+          ctxM.fillText("🏍", motoPos.x, motoPos.y + 0.5);
+
+          const myLabel = `Você (${mbObj.nome})`;
+          ctxM.font = "bold 9px Roboto, sans-serif";
+          const mlW = ctxM.measureText(myLabel).width;
+          ctxM.fillStyle = "rgba(9, 9, 11, 0.85)";
+          ctxM.fillRect(motoPos.x - mlW / 2 - 3, motoPos.y + 13, mlW + 6, 12);
+          ctxM.fillStyle = "#38bdf8";
+          ctxM.fillText(myLabel, motoPos.x, motoPos.y + 22);
         }
 
-        lastCoords = { lat, lng, accuracy };
-        lastGpsSentAt = Date.now();
-        gpsStatusText = `🛰️ Satélite GPS Conectado: ±${accuracy}m • Pelotas/RS`;
+        function setupMotoboyMapEvents() {
+          const cv = document.getElementById("moto-map-canvas");
+          if (!cv) return;
 
-        const mbObj = getMyMotoObj();
-        const gpsBody = JSON.stringify({
-          type: "GPS",
-          motoboyId: myMotoId,
-          nome: mbObj.nome,
-          ticket: selectedTicket || "00",
-          lat: Number(lat),
-          lng: Number(lng),
-          accuracy: Number(accuracy),
-          ts: Date.now()
+          cv.addEventListener("mousedown", e => {
+            motoMapState.isDragging = true;
+            motoMapState.autoFollow = false;
+            motoMapState.lastX = e.clientX;
+            motoMapState.lastY = e.clientY;
+          });
+
+          window.addEventListener("mouseup", () => {
+            motoMapState.isDragging = false;
+          });
+
+          cv.addEventListener("mousemove", e => {
+            if (!motoMapState.isDragging) return;
+            const dx = e.clientX - motoMapState.lastX;
+            const dy = e.clientY - motoMapState.lastY;
+            motoMapState.lastX = e.clientX;
+            motoMapState.lastY = e.clientY;
+
+            const centerWorld = latLngToWorldPixel(motoMapState.centerLat, motoMapState.centerLng, motoMapState.zoomLevel);
+            const newLatLng = worldPixelToLatLng(centerWorld.x - dx, centerWorld.y - dy, motoMapState.zoomLevel);
+            motoMapState.centerLat = newLatLng.lat;
+            motoMapState.centerLng = newLatLng.lng;
+            drawMotoboyMap();
+          });
+
+          // Suporte a toque no celular (Touch Events)
+          cv.addEventListener("touchstart", e => {
+            if (e.touches.length === 1) {
+              motoMapState.isDragging = true;
+              motoMapState.autoFollow = false;
+              motoMapState.lastX = e.touches[0].clientX;
+              motoMapState.lastY = e.touches[0].clientY;
+            }
+          }, { passive: true });
+
+          cv.addEventListener("touchmove", e => {
+            if (!motoMapState.isDragging || e.touches.length !== 1) return;
+            const dx = e.touches[0].clientX - motoMapState.lastX;
+            const dy = e.touches[0].clientY - motoMapState.lastY;
+            motoMapState.lastX = e.touches[0].clientX;
+            motoMapState.lastY = e.touches[0].clientY;
+
+            const centerWorld = latLngToWorldPixel(motoMapState.centerLat, motoMapState.centerLng, motoMapState.zoomLevel);
+            const newLatLng = worldPixelToLatLng(centerWorld.x - dx, centerWorld.y - dy, motoMapState.zoomLevel);
+            motoMapState.centerLat = newLatLng.lat;
+            motoMapState.centerLng = newLatLng.lng;
+            drawMotoboyMap();
+          }, { passive: true });
+
+          cv.addEventListener("touchend", () => {
+            motoMapState.isDragging = false;
+          });
+        }
+
+        function renderMotoboyAppUI(flashBanner = "") {
+          const cur = myDeliveries.find(d => String(d.ticket) === String(selectedTicket)) || myDeliveries[0] || null;
+          if (cur) selectedTicket = cur.ticket;
+
+          let topDetailsHtml = "";
+          let bottomActionHtml = "";
+
+          if (!cur) {
+            topDetailsHtml = `
+              <div class="p-3.5 rounded-2xl bg-[#14141d] border border-zinc-800 text-center space-y-1.5">
+                <div class="text-xs font-black uppercase text-amber-300">🏍️ Aguardando Próxima Entrega</div>
+                <div class="text-[11px] text-zinc-300">
+                  Você está online na escala. Quando a loja despachar, a comanda aparecerá automaticamente aqui.
+                </div>
+              </div>
+            `;
+            bottomActionHtml = `
+              <div class="p-3 rounded-2xl bg-[#14141d] border border-zinc-800 flex items-center justify-between text-xs font-bold text-zinc-300">
+                <span class="flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  🔄 Retornando à Loja (IL2)
+                </span>
+                <button onclick="window.motoRecenter()" class="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[10.5px]">
+                  🎯 Focar Loja
+                </button>
+              </div>
+            `;
+          } else {
+            const itensList = Array.isArray(cur.itens) ? cur.itens : String(cur.itens || "1x Pedido Facity").split("|");
+            topDetailsHtml = `
+              ${
+                myDeliveries.length > 1
+                  ? `<div class="flex items-center gap-1.5 overflow-x-auto pb-1">
+                       ${myDeliveries.map(d => `
+                         <button onclick="window.onSelectMotoboyTicketTab('${d.ticket}')"
+                                 class="px-3 py-1.5 rounded-xl font-bold text-xs whitespace-nowrap cursor-pointer ${String(d.ticket) === String(cur.ticket) ? 'bg-zinc-200 text-black shadow' : 'bg-[#181820] text-zinc-300 border border-zinc-700'}">
+                           Comanda #${d.ticket}
+                         </button>
+                       `).join("")}
+                     </div>`
+                  : ``
+              }
+
+              <div class="p-3 rounded-2xl bg-[#14141d] border border-zinc-800 space-y-1.5">
+                <div class="flex items-center justify-between">
+                  <span class="px-2.5 py-0.5 rounded-full bg-amber-400 text-black font-black text-xs">
+                    Comanda #${cur.ticket}
+                  </span>
+                  <span class="text-xs font-bold text-white">👤 ${cur.cliente}</span>
+                </div>
+                <div class="text-xs font-bold text-zinc-200">
+                  📍 ${cur.endereco} — ${cur.bairro}
+                </div>
+                <div class="text-[10.5px] text-zinc-400 truncate">
+                  🍔 ${itensList.join(" • ")}
+                </div>
+              </div>
+            `;
+
+            // BARRA INFERIOR COM O BOTÃO REDONDO "✓"
+            bottomActionHtml = `
+              <div class="flex items-center justify-between gap-3 bg-[#14141d] p-3 rounded-2xl border border-zinc-800 shadow-2xl">
+                <div class="min-w-0 flex-1">
+                  <div class="text-[10px] uppercase font-bold text-zinc-400">Total a Cobrar:</div>
+                  <div class="text-lg font-black text-emerald-400 leading-tight">
+                    R$ ${cur.total} <span class="text-xs text-zinc-300 font-bold">(${cur.pagamento})</span>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <span class="text-[10.5px] font-black uppercase text-zinc-300">Já Entreguei:</span>
+                  <button id="btn-finish-delivery"
+                          onclick="window.finishMotoboyDeliveryNow('${cur.ticket}')"
+                          class="w-14 h-14 rounded-full bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-black text-2xl flex items-center justify-center shadow-2xl border-2 border-emerald-300 cursor-pointer transition shrink-0"
+                          title="Já entreguei o pedido (Dar Baixa)">
+                    ✓
+                  </button>
+                </div>
+              </div>
+            `;
+          }
+
+          document.body.innerHTML = `
+            <div class="min-h-screen bg-[#09090b] text-white p-3 flex flex-col justify-between max-w-md mx-auto">
+              <div class="space-y-2.5 flex-1 flex flex-col">
+                
+                <!-- CABEÇALHO SUPERIOR FIXO -->
+                <div class="p-2.5 rounded-2xl bg-[#14141d] border border-zinc-800 flex items-center justify-between gap-2">
+                  <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-full bg-red-600 border border-amber-400 flex items-center justify-center text-white font-black text-[11px]">
+                      IL2
+                    </div>
+                    <div>
+                      <div class="text-xs font-black text-white flex items-center gap-1.5">
+                        <span>🏍️ ${mbObj.nome}</span>
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                      </div>
+                      <div class="text-[10px] text-zinc-400 font-mono">${gpsStatusText}</div>
+                    </div>
+                  </div>
+
+                  <div class="flex items-center gap-1.5">
+                    <button onclick="window.installMotoboyAppOnPhone()"
+                            class="px-2 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 font-bold text-[10px] uppercase cursor-pointer"
+                            title="Instalar ícone do aplicativo na tela inicial do celular">
+                      📲 Instalar
+                    </button>
+                    <button onclick="window.motoboyLogout()"
+                            class="px-2 py-1 rounded-lg bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800 font-bold text-[10px] uppercase cursor-pointer"
+                            title="Desconectar e trocar de entregador">
+                      🚪 Sair
+                    </button>
+                  </div>
+                </div>
+
+                ${
+                  flashBanner
+                    ? `<div class="p-2.5 rounded-xl bg-emerald-950/90 border border-emerald-500 text-emerald-300 text-xs font-bold text-center">${flashBanner}</div>`
+                    : ``
+                }
+
+                <!-- DETALHES COMPACTOS DO PEDIDO -->
+                ${topDetailsHtml}
+
+                <!-- MAPA DO GOOGLE MAPS NO APP DO MOTOBOY -->
+                <div class="relative flex-1 min-h-[46vh] sm:min-h-[52vh] bg-[#f1f3f4] rounded-2xl overflow-hidden border border-zinc-700 shadow-2xl" id="moto-map-container">
+                  <canvas id="moto-map-canvas" class="w-full h-full block cursor-grab active:cursor-grabbing"></canvas>
+
+                  <!-- CONTROLES FLUTUANTES DO MAPA -->
+                  <div class="absolute top-2.5 left-2.5 z-10 flex items-center gap-1">
+                    <button onclick="window.motoRecenter()"
+                            class="px-2.5 py-1 rounded-xl bg-black/85 hover:bg-black text-white font-bold text-[11px] shadow border border-zinc-600 flex items-center gap-1 cursor-pointer">
+                      🎯 Centralizar
+                    </button>
+                  </div>
+
+                  <div class="absolute top-2.5 right-2.5 z-10 flex items-center gap-1">
+                    <button onclick="window.motoToggleLayer()"
+                            class="px-2 py-1 rounded-xl bg-black/85 hover:bg-black text-white font-bold text-[10.5px] shadow border border-zinc-600 cursor-pointer">
+                      ${motoMapState.isHybrid ? "🗺️ Ruas" : "🛰️ Satélite"}
+                    </button>
+                    <div class="flex items-center bg-black/85 rounded-xl border border-zinc-600 shadow overflow-hidden">
+                      <button onclick="window.motoZoomIn()" class="px-2 py-0.5 text-white font-black text-xs hover:bg-zinc-800 cursor-pointer">+</button>
+                      <button onclick="window.motoZoomOut()" class="px-2 py-0.5 text-white font-black text-xs hover:bg-zinc-800 cursor-pointer">−</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- BARRA INFERIOR DE CONCLUSÃO COM BOTÃO '✓' REDONDO -->
+                ${bottomActionHtml}
+
+              </div>
+
+              <div class="text-center text-[10px] text-zinc-500 pt-2">
+                Iago Lanches 2 • Google Maps Cartography • Pelotas/RS
+              </div>
+            </div>
+          `;
+
+          setTimeout(() => {
+            setupMotoboyMapEvents();
+            drawMotoboyMap();
+          }, 30);
+        }
+
+        function handleMotoIncomingDispatch(payload) {
+          if (!payload) return;
+
+          if (payload.type === "RESET_DAY") {
+            finishedMotoTickets.clear();
+            myDeliveries = [];
+            try {
+              localStorage.setItem("iago_moto_finished_tickets", JSON.stringify([]));
+              localStorage.setItem("iago_moto_deliveries_" + myMotoId, JSON.stringify([]));
+            } catch (e) {}
+            selectedTicket = null;
+            renderMotoboyAppUI("🔄 Expediente resetado pela loja. Pronto para novos pedidos!");
+            return;
+          }
+
+          if (payload.type !== "DISPATCH") return;
+
+          const pId = String(payload.motoboyId || "").trim().toLowerCase();
+          const cId = String(myMotoId || "").trim().toLowerCase();
+          const pNome = String(payload.nome || "").trim().toLowerCase();
+          const cNome = String(mbObj.nome || "").trim().toLowerCase();
+
+          const isMatch = (pId && cId && (pId === cId || pId.replace(/\D/g, "") === cId.replace(/\D/g, ""))) ||
+                          (pNome && cNome && (pNome === cNome || pNome.includes(cNome) || cNome.includes(pNome)));
+
+          if (!isMatch) return;
+
+          const cleanTk = String(payload.ticket || "").replace(/^FAC-00/i, "").replace(/\D/g, "") || String(payload.ticket);
+
+          finishedMotoTickets.delete(cleanTk);
+          try {
+            localStorage.setItem("iago_moto_finished_tickets", JSON.stringify(Array.from(finishedMotoTickets)));
+          } catch (e) {}
+
+          const newDel = {
+            orderId: payload.orderId || `FAC-00${cleanTk}`,
+            ticket: String(cleanTk),
+            cliente: payload.cliente || "Cliente",
+            endereco: payload.endereco || "Pelotas",
+            bairro: payload.bairro || "Pelotas",
+            itens: Array.isArray(payload.itens) ? payload.itens : [String(payload.itens || "1x Pedido Facity")],
+            pagamento: payload.pagamento || "Facity",
+            total: payload.total || "0,00"
+          };
+
+          const idx = myDeliveries.findIndex(d => String(d.ticket) === String(newDel.ticket));
+          const isNew = idx === -1;
+          if (idx >= 0) myDeliveries[idx] = newDel;
+          else myDeliveries.unshift(newDel);
+          saveMyDeliveries();
+
+          selectedTicket = newDel.ticket;
+          if (navigator.vibrate) navigator.vibrate([250, 100, 250, 100, 300]);
+          renderMotoboyAppUI(`🔔 NOVA ENTREGA RECEBIDA: COMANDA #${newDel.ticket}!`);
+          motoRecenter();
+        }
+
+        async function pollMotoDeliveriesFromCloud() {
+          for (const topic of [NTFY_CMD_TOPIC, NTFY_TOPIC]) {
+            try {
+              const resp = await fetch(`https://ntfy.sh/${topic}/json?since=1h`, { cache: "no-store" });
+              if (!resp.ok) continue;
+              const text = await resp.text();
+              const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+              for (const line of lines) {
+                try {
+                  const outer = JSON.parse(line);
+                  if (outer && outer.event === "message" && outer.message) {
+                    const payload = JSON.parse(outer.message);
+                    if (payload.type === "DISPATCH" || payload.type === "RESET_DAY") {
+                      handleMotoIncomingDispatch(payload);
+                    }
+                  }
+                } catch (e) {}
+              }
+            } catch (err) {}
+          }
+        }
+
+        renderMotoboyAppUI();
+
+        // Escuta entregas na nuvem
+        if (localSyncChannel) {
+          localSyncChannel.onmessage = e => {
+            if (e && e.data) handleMotoIncomingDispatch(e.data);
+          };
+        }
+        window.addEventListener("storage", e => {
+          if (e.key === "iago_last_cloud_cmd" && e.newValue) {
+            try {
+              handleMotoIncomingDispatch(JSON.parse(e.newValue));
+            } catch (err) {}
+          }
         });
 
-        if (localSyncChannel) {
-          try { localSyncChannel.postMessage(JSON.parse(gpsBody)); } catch(e){}
-        }
+        [NTFY_CMD_TOPIC, NTFY_TOPIC].forEach(topic => {
+          try {
+            const esMoto = new EventSource(`https://ntfy.sh/${topic}/sse`);
+            esMoto.onmessage = evt => {
+              try {
+                const outer = JSON.parse(evt.data);
+                if (!outer || !outer.message) return;
+                const payload = JSON.parse(outer.message);
+                handleMotoIncomingDispatch(payload);
+              } catch (err) {}
+            };
+          } catch (e) {}
+        });
+        pollMotoDeliveriesFromCloud();
+        setInterval(pollMotoDeliveriesFromCloud, 3000);
 
-        for (const t of [NTFY_GPS_TOPIC, NTFY_TOPIC]) {
-          fetch(`https://ntfy.sh/${t}`, {
-            method: "POST",
-            headers: { "Content-Type": "text/plain;charset=UTF-8" },
-            body: gpsBody
-          }).catch(() => {});
-        }
-      }
-
-      function triggerImmediateGpsSend() {
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(pos => {
-            sendLiveGpsPayload(pos.coords.latitude, pos.coords.longitude, Math.round(pos.coords.accuracy || 0));
-          }, () => {}, { enableHighAccuracy: true, maximumAge: 0, timeout: 8000 });
-        }
-      }
-
-      triggerImmediateGpsSend();
-
-      if (navigator.geolocation) {
-        navigator.geolocation.watchPosition(pos => {
-          const now = Date.now();
-          if (now - lastGpsSentAt >= 3500) {
-            sendLiveGpsPayload(pos.coords.latitude, pos.coords.longitude, Math.round(pos.coords.accuracy || 0));
+        async function sendLiveGpsPayload(lat, lng, accuracy = 0) {
+          if (!isValidPelotasCoords(lat, lng)) {
+            gpsStatusText = `⚠️ Sinal fora de Pelotas (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+            return;
           }
-        }, err => {
-          gpsStatusText = `⚠️ GPS: Permissão ou sinal indisponível (${err.message || 'Ative a localização'})`;
-        }, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 });
+
+          lastCoords = { lat, lng, accuracy };
+          lastGpsSentAt = Date.now();
+          gpsStatusText = `🛰️ Satélite: ±${accuracy}m • Pelotas/RS`;
+
+          if (motoMapState.autoFollow) {
+            motoMapState.centerLat = lat;
+            motoMapState.centerLng = lng;
+          }
+          drawMotoboyMap();
+
+          const gpsBody = JSON.stringify({
+            type: "GPS",
+            motoboyId: myMotoId,
+            nome: mbObj.nome,
+            ticket: selectedTicket || "00",
+            lat: Number(lat),
+            lng: Number(lng),
+            accuracy: Number(accuracy),
+            ts: Date.now()
+          });
+
+          if (localSyncChannel) {
+            try { localSyncChannel.postMessage(JSON.parse(gpsBody)); } catch(e){}
+          }
+
+          for (const t of [NTFY_GPS_TOPIC, NTFY_TOPIC]) {
+            fetch(`https://ntfy.sh/${t}`, {
+              method: "POST",
+              headers: { "Content-Type": "text/plain;charset=UTF-8" },
+              body: gpsBody
+            }).catch(() => {});
+          }
+        }
+
+        function triggerImmediateGpsSend() {
+          if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(pos => {
+              sendLiveGpsPayload(pos.coords.latitude, pos.coords.longitude, Math.round(pos.coords.accuracy || 0));
+            }, () => {}, { enableHighAccuracy: true, maximumAge: 0, timeout: 8000 });
+          }
+        }
+
+        triggerImmediateGpsSend();
+
+        if (navigator.geolocation) {
+          navigator.geolocation.watchPosition(pos => {
+            const now = Date.now();
+            if (now - lastGpsSentAt >= 3500) {
+              sendLiveGpsPayload(pos.coords.latitude, pos.coords.longitude, Math.round(pos.coords.accuracy || 0));
+            }
+          }, err => {
+            gpsStatusText = `⚠️ GPS: Ative a localização no navegador`;
+          }, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 });
+        }
+
+        setInterval(() => {
+          if (lastCoords) {
+            sendLiveGpsPayload(lastCoords.lat, lastCoords.lng, lastCoords.accuracy);
+          } else {
+            triggerImmediateGpsSend();
+          }
+        }, 5000);
       }
 
-      // Heartbeat a cada 5 segundos para manter o entregador ativo no mapa
-      setInterval(() => {
-        if (lastCoords) {
-          sendLiveGpsPayload(lastCoords.lat, lastCoords.lng, lastCoords.accuracy);
-        } else {
-          triggerImmediateGpsSend();
-        }
-      }, 5000);
-
+      initMotoboySession();
       return true;
     }
 
